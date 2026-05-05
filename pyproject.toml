@@ -1,0 +1,52 @@
+[project]
+name = "ttsd"
+version = "0.0.1"
+description = "Test-time scaling for text-to-video diffusion (Wan 2.2 + VBench)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "fy27", email = "fy27@rice.edu" }]
+
+dependencies = [
+  "torch>=2.4",
+  "diffusers>=0.32",
+  "transformers>=4.46",
+  "accelerate>=1.0",
+  "huggingface_hub>=0.25",
+  "einops",
+  "imageio[ffmpeg]",
+  "numpy",
+  "pyyaml",
+  "tqdm",
+  "rich",
+]
+
+[project.optional-dependencies]
+eval = [
+  # VBench is installed editable from external/VBench — see README. Do NOT
+  # add `vbench` here; it would shadow the editable clone.
+  "open_clip_torch",
+  "decord",
+  "torchmetrics",
+]
+dev = [
+  "ruff",
+  "pytest",
+  "ipython",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["ttsd*"]
+exclude = ["external*", "runs*", "notebooks*"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["E501"]

@@ -1,0 +1,48 @@
+# Big artifacts: never commit
+runs/
+wandb/
+*.log
+*.mp4
+*.gif
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.ckpt
+*.npz
+
+# Vendored upstream repos: cloned by scripts/setup_external.sh.
+# Keep external/ directory itself; ignore its contents.
+external/*
+!external/.gitkeep
+
+# Reference papers: keep our notes (.md), drop the PDFs (copyright)
+paper-pdf/*.pdf
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Notebooks (exploratory; not committed by default)
+notebooks/
+*.ipynb
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# Local secrets / overrides
+.env
+.envrc
+configs/local_*.yaml
