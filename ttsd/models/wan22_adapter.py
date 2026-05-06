@@ -27,6 +27,7 @@ def _resolved_model_path() -> str:
 class GenerationOutput:
     frames: torch.Tensor  # (T, H, W, 3) uint8 or float in [0, 1]
     latents_by_step: dict[int, torch.Tensor] = field(default_factory=dict)
+    posterior_means_by_step: dict[int, torch.Tensor] = field(default_factory=dict)
 
 
 class Wan22Adapter:
@@ -59,6 +60,76 @@ class Wan22Adapter:
 
         self._pipe = DiffusionPipeline.from_pretrained(path, torch_dtype=self.dtype)
         self._pipe.to(self.device)
+
+    @staticmethod
+    def _capture_tensor(tensor: torch.Tensor) -> torch.Tensor:
+        return tensor.detach().to("cpu", dtype=torch.float16).clone()
+
+    @torch.no_grad()
+    def generate_with_posterior_means(
+        self,
+        prompt: str,
+        seed: int,
+        num_frames: int = 81,
+        height: int = 480,
+        width: int = 832,
+        num_inference_steps: int = 50,
+        guidance_scale: float = 5.0,
+        snapshot_steps: Iterable[int] = (),
+        posterior_mean_steps: Iterable[int] = (),
+    ) -> GenerationOutput:
+        """Run one T2V generation and additionally capture UniPC x0 predictions.
+
+        This wraps the scheduler used by the original pipeline call instead of
+        reimplementing the denoising loop, so the final sample stays on the same
+        execution path as the baseline run.
+        """
+        self._load()
+        pipe = self._pipe
+        snapshot_set = set(snapshot_steps)
+        posterior_set = set(posterior_mean_steps)
+        captured: dict[int, torch.Tensor] = {}
+        posterior_means: dict[int, torch.Tensor] = {}
+        original_step = pipe.scheduler.step
+        step_idx = 0
+
+        def wrapped_step(model_output, timestep, sample, return_dict=True):
+            nonlocal step_idx
+            if step_idx in posterior_set:
+                posterior = pipe.scheduler.convert_model_output(model_output, sample=sample)
+                posterior_means[step_idx] = self._capture_tensor(posterior)
+
+            result = original_step(model_output, timestep, sample, return_dict=return_dict)
+            prev_sample = result.prev_sample if return_dict else result[0]
+
+            if step_idx in snapshot_set:
+                captured[step_idx] = self._capture_tensor(prev_sample)
+
+            step_idx += 1
+            return result
+
+        pipe.scheduler.step = wrapped_step
+        try:
+            generator = torch.Generator(device=self.device).manual_seed(seed)
+            result = pipe(
+                prompt=prompt,
+                num_frames=num_frames,
+                height=height,
+                width=width,
+                num_inference_steps=num_inference_steps,
+                guidance_scale=guidance_scale,
+                generator=generator,
+            )
+        finally:
+            pipe.scheduler.step = original_step
+
+        frames = result.frames[0] if hasattr(result, "frames") else result[0]
+
+        return GenerationOutput(
+            frames=frames,
+            latents_by_step=captured,
+            posterior_means_by_step=posterior_means,
+        )
 
     def generate(
         self,
