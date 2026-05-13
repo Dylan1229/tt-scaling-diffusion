@@ -1,0 +1,5 @@
+torch==2.7.1+cu128
+diffusers==0.37.1
+transformers==5.7.0
+huggingface_hub==1.13.0
+tokenizers==0.22.2
