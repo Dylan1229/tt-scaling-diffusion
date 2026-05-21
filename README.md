@@ -46,9 +46,10 @@ tt-scaling-diffusion/
     └── baseline/<run_id>/
         └── <prompt_id>/<seed>/
             ├── video.mp4
-            ├── latents/step_NNN.pt    # snapshots for verifier training
+            ├── latents/step_NNN.pt          # noisy latent x_t snapshots
+            ├── posterior_means/step_NNN.pt  # x0_hat snapshots (opt-in, see Quick start)
             ├── meta.json
-            └── DONE                   # resume marker
+            └── DONE                          # resume marker
 ```
 
 **Three-tier code separation:**
@@ -105,6 +106,21 @@ python -m ttsd.runners.baseline --config configs/baseline_wan22_480p.yaml
 ```
 Resumable — re-running skips any (prompt, seed) with a `DONE` marker.
 
+**With posterior-mean (x0_hat) capture** — recommended for any sweep that will feed the Phase 1 latent verifier:
+```bash
+# CLI flag form
+python -m ttsd.runners.baseline --config configs/baseline_wan22_480p.yaml \
+    --capture-posterior-means
+# or set `snapshots.posterior_means: true` in the YAML and drop the flag.
+```
+At each snapshot step we save **two** tensors:
+- `latents/step_NNN.pt` — the noisy latent `x_t` (what the model sees as input)
+- `posterior_means/step_NNN.pt` — the scheduler's predicted clean sample `x0_hat` at that step (Tweedie / MMSE estimate of the final latent, derived analytically from the model's velocity prediction — no extra neural forward).
+
+`x0_hat` is the form a latent verifier wants: decoding it through the VAE gives a clean preview that converges to the final frame, whereas decoding the raw noisy `x_t` gives garbage. Cost: ~one cheap algebraic op per snapshot step + ~3 MB extra per snapshot.
+
+For the original 2026-05-04 Phase 0 run (generated before the flag existed), use `ttsd/runners/replay_with_posterior_means.py` to backfill posterior means clip-by-clip. New runs should use the flag.
+
 **VBench evaluation** of a finished run:
 ```bash
 python -m ttsd.eval.vbench --run runs/baseline/<run_id>
@@ -117,9 +133,21 @@ Writes per-(prompt, seed, dim) scores to `<run_id>/vbench/vbench_scores_long.csv
 
 Prove that **test-time scaling is necessary** on Wan 2.2: show that VBench scores have non-trivial seed-to-seed variance for the same prompt. Without that variance, no downstream TTS work is justified. Headline artifact = per-prompt score histogram across seeds (see `ROADMAP.md` §3).
 
-Secondary goal: every Phase-0 generation persists intermediate latents at every-5-steps. Those are the training set for the Phase-1 latent verifier.
+Secondary goal: every Phase-0 generation persists intermediate latents (and, when enabled, posterior-mean `x0_hat` predictions) at every-5-steps. Those are the training set for the Phase-1 latent verifier.
 
 ---
+
+---
+
+## Theory pointer: what is `x0_hat`?
+
+For Wan 2.2's flow-matching parametrization, the forward process is `x_t = (1−t) x_0 + t·ε` and the model predicts a velocity `v_θ(x_t, t) ≈ ε − x_0`. So at every denoising step we can recover the clean-sample prediction *for free*:
+
+```
+x0_hat = x_t − t · v_θ        (≡ scheduler.convert_model_output(...) for UniPC)
+```
+
+This is the Bayes-optimal MMSE estimate of `x_0` given `(x_t, prompt)` — the same quantity called ẑ_{0|t} in [`paper-pdf/early-failure-theoretical-analysis.md`](./paper-pdf/early-failure-theoretical-analysis.md) (Theorem 1: its squared error to the final clean latent contracts monotonically with SNR; Theorem 2: gives a PAC license for early stopping). It's also the same "L2R preview" mechanism used by EFD&I — except we save it pre-VAE-decode so it can also feed latent-space verifiers (Phase 1).
 
 ## What gets committed to GitHub
 

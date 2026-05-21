@@ -39,6 +39,8 @@ class RunMeta:
     guidance_scale: float
     snapshot_steps: list[int]
     timestamp: str
+    capture_posterior_means: bool = False
+    posterior_mean_steps: list[int] | None = None
 
 
 def _load_prompts(spec: str) -> list[dict]:
@@ -73,6 +75,20 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--smoke", action="store_true", help="One prompt, one seed — sanity check.")
     p.add_argument("--limit-prompts", type=int, default=None)
     p.add_argument("--limit-seeds", type=int, default=None)
+    p.add_argument(
+        "--capture-posterior-means",
+        dest="capture_posterior_means",
+        action="store_true",
+        default=None,
+        help="Also save the scheduler's predicted clean sample (Tweedie / x0_hat) "
+             "at each snapshot step into <seed>/posterior_means/. Overrides config.",
+    )
+    p.add_argument(
+        "--no-capture-posterior-means",
+        dest="capture_posterior_means",
+        action="store_false",
+        help="Disable posterior-mean capture even if the config enables it.",
+    )
     args = p.parse_args(argv)
 
     cfg = yaml.safe_load(args.config.read_text())
@@ -105,6 +121,13 @@ def main(argv: list[str] | None = None) -> None:
         snap_cfg.get("also_keep", []),
     )
 
+    # Resolve posterior-mean capture: CLI overrides config; default off.
+    if args.capture_posterior_means is None:
+        capture_posterior_means = bool(snap_cfg.get("posterior_means", False))
+    else:
+        capture_posterior_means = bool(args.capture_posterior_means)
+    posterior_mean_steps = snapshot_steps if capture_posterior_means else []
+
     run_id = out_cfg.get("run_id") or dt.datetime.now().strftime("%Y%m%d_%H%M%S")
     run_root = Path(out_cfg["root"]) / run_id
     run_root.mkdir(parents=True, exist_ok=True)
@@ -113,6 +136,7 @@ def main(argv: list[str] | None = None) -> None:
     print(f"[baseline] run_root={run_root}")
     print(f"[baseline] {len(prompts)} prompts × {len(seeds)} seeds = {len(prompts) * len(seeds)} clips")
     print(f"[baseline] snapshotting steps: {snapshot_steps}")
+    print(f"[baseline] capture posterior means: {capture_posterior_means}")
 
     height, width = gen_cfg["resolution"]
 
@@ -124,24 +148,42 @@ def main(argv: list[str] | None = None) -> None:
                 continue
             out_dir.mkdir(parents=True, exist_ok=True)
             (out_dir / "latents").mkdir(exist_ok=True)
+            if capture_posterior_means:
+                (out_dir / "posterior_means").mkdir(exist_ok=True)
 
             print(f"[baseline] ▶ {prompt['id']} seed={seed} :: {prompt['text'][:60]}…")
-            result = adapter.generate(
-                prompt=prompt["text"],
-                seed=seed,
-                num_frames=gen_cfg["num_frames"],
-                height=height,
-                width=width,
-                num_inference_steps=gen_cfg["num_inference_steps"],
-                guidance_scale=gen_cfg["guidance_scale"],
-                snapshot_steps=snapshot_steps,
-            )
+            if capture_posterior_means:
+                result = adapter.generate_with_posterior_means(
+                    prompt=prompt["text"],
+                    seed=seed,
+                    num_frames=gen_cfg["num_frames"],
+                    height=height,
+                    width=width,
+                    num_inference_steps=gen_cfg["num_inference_steps"],
+                    guidance_scale=gen_cfg["guidance_scale"],
+                    snapshot_steps=snapshot_steps,
+                    posterior_mean_steps=posterior_mean_steps,
+                )
+            else:
+                result = adapter.generate(
+                    prompt=prompt["text"],
+                    seed=seed,
+                    num_frames=gen_cfg["num_frames"],
+                    height=height,
+                    width=width,
+                    num_inference_steps=gen_cfg["num_inference_steps"],
+                    guidance_scale=gen_cfg["guidance_scale"],
+                    snapshot_steps=snapshot_steps,
+                )
 
             if out_cfg.get("save_video", True):
                 _save_video(result.frames, out_dir / "video.mp4")
             if out_cfg.get("save_latents", True):
                 for step_idx, latent in result.latents_by_step.items():
                     torch.save(latent, out_dir / "latents" / f"step_{step_idx:03d}.pt")
+            if capture_posterior_means:
+                for step_idx, posterior in result.posterior_means_by_step.items():
+                    torch.save(posterior, out_dir / "posterior_means" / f"step_{step_idx:03d}.pt")
 
             meta = RunMeta(
                 prompt_id=prompt["id"],
@@ -156,6 +198,8 @@ def main(argv: list[str] | None = None) -> None:
                 guidance_scale=gen_cfg["guidance_scale"],
                 snapshot_steps=snapshot_steps,
                 timestamp=dt.datetime.now().isoformat(timespec="seconds"),
+                capture_posterior_means=capture_posterior_means,
+                posterior_mean_steps=posterior_mean_steps if capture_posterior_means else None,
             )
             (out_dir / "meta.json").write_text(json.dumps(asdict(meta), indent=2))
             (out_dir / "DONE").touch()

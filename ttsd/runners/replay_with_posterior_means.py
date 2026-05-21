@@ -1,8 +1,15 @@
-"""Replay one prior baseline sample and save intermediate x0 predictions.
+"""Backfill posterior means for a single existing baseline (prompt, seed).
 
-This reproduces a single (prompt, seed) generation from an existing run using
-the same sampling settings, while additionally saving the UniPC scheduler's
-x0-like intermediate predictions.
+This reproduces one generation from a prior run using the exact same sampling
+settings and seed, then additionally saves the UniPC scheduler's x0-like
+intermediate predictions (the "posterior mean" / Tweedie estimate ẑ_{0|t}).
+
+DEPRECATED FOR NEW RUNS. For any run started after 2026-05-05, prefer setting
+`snapshots.posterior_means: true` in the baseline config (or pass
+`--capture-posterior-means` to `ttsd.runners.baseline`) — that captures the
+posterior means inline at essentially zero extra cost. This replay script
+exists only to backfill the original 2026-05-04 Phase 0 run, which was
+generated before that flag was wired in.
 """
 
 from __future__ import annotations

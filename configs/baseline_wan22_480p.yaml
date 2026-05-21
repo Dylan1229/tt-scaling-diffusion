@@ -27,6 +27,11 @@ snapshots:
   # Cheap: 50/5 = 10 snapshots × ~tens of MB each.
   every_n_steps: 5
   also_keep: [1, 49]        # keep first and last too
+  # When true, also save the scheduler's predicted clean sample (Tweedie /
+  # x0_hat = posterior mean) at the same snapshot steps, into
+  # <seed>/posterior_means/step_NNN.pt. CLI flags override this:
+  #   --capture-posterior-means / --no-capture-posterior-means.
+  posterior_means: false
 
 output:
   root: runs/baseline
