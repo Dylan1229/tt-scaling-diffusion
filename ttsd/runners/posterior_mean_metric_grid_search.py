@@ -1,4 +1,4 @@
-"""Grid-search window size and tail_k for posterior-mean heatmap metrics.
+"""Grid-search window size and tail_k for posterior-mean similarity matrices.
 
 Each candidate score is:
     1. take the last n rows or columns of the heatmap,
@@ -33,6 +33,19 @@ SUBSCORES = [
 ]
 
 VALID_DIRECTIONS = {"rows", "cols"}
+VALID_MATRIX_TYPES = {"diagonal", "frame_neighbor", "posterior_neighbor"}
+
+MATRIX_FILE_BY_TYPE = {
+    "diagonal": "posterior_mean_diagonal_similarity.npy",
+    "frame_neighbor": "posterior_mean_frame_neighbor_similarity.npy",
+    "posterior_neighbor": "posterior_mean_posterior_neighbor_similarity.npy",
+}
+
+SCORE_PREFIX_BY_MATRIX_TYPE = {
+    "diagonal": {"rows": "late", "cols": "frame"},
+    "frame_neighbor": {"rows": "posterior", "cols": "frame"},
+    "posterior_neighbor": {"rows": "posterior", "cols": "frame"},
+}
 
 
 def _tail_mean(values: np.ndarray, tail_fraction: float) -> float:
@@ -78,12 +91,14 @@ def _default_tail_fractions() -> list[float]:
 def _load_seed_records(
     heatmap_run_root: Path,
     vbench_rows: dict[tuple[str, int], dict[str, object]],
+    matrix_type: str,
 ) -> tuple[list[dict[str, object]], int, int]:
     seed_records = []
     max_rows = 0
     max_cols = 0
+    matrix_filename = MATRIX_FILE_BY_TYPE[matrix_type]
     for seed_dir in _iter_seed_dirs(heatmap_run_root):
-        heatmap_path = seed_dir / "posterior_mean_diagonal_similarity.npy"
+        heatmap_path = seed_dir / matrix_filename
         if not heatmap_path.exists():
             continue
         prompt_id = seed_dir.parent.name
@@ -133,6 +148,7 @@ def _compute_alignment_rows(
     last_n_values: list[int],
     tail_fractions: list[float],
     direction: str,
+    matrix_type: str,
 ) -> list[dict[str, object]]:
     by_prompt = defaultdict(list)
     for row in seed_records:
@@ -156,8 +172,9 @@ def _compute_alignment_rows(
                 candidate_rows.append(candidate)
 
             score_values = np.array([row["score_value"] for row in candidate_rows], dtype=float)
-            prefix_name = "late" if direction == "rows" else "frame"
+            prefix_name = SCORE_PREFIX_BY_MATRIX_TYPE[matrix_type][direction]
             summary = {
+                "matrix_type": matrix_type,
                 "direction": direction,
                 "last_n": last_n,
                 "tail_k": tail_fraction,
@@ -239,6 +256,7 @@ def _write_csv(path: Path, rows: list[dict[str, object]]) -> None:
 
 
 def _write_markdown_summary(path: Path, rows: list[dict[str, object]]) -> None:
+    matrix_type = rows[0]["matrix_type"]
     direction = rows[0]["direction"]
     axis_label = "rows" if direction == "rows" else "columns"
     best_avg = max(rows, key=lambda row: row["avg_vbench_z_prompt_mean_spearman"])
@@ -261,6 +279,7 @@ def _write_markdown_summary(path: Path, rows: list[dict[str, object]]) -> None:
         "4. take the lowest `k` fraction,",
         "5. average them.",
         "",
+        f"Matrix type: `{matrix_type}`",
         f"Direction: `{direction}`",
         "",
         "## Best by prompt-local average VBench z Spearman",
@@ -321,21 +340,26 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--max-last-n", type=int, default=None)
     parser.add_argument("--tail-fractions", type=str, default=None)
     parser.add_argument("--direction", type=str, choices=sorted(VALID_DIRECTIONS), default="rows")
+    parser.add_argument("--matrix-type", type=str, choices=sorted(VALID_MATRIX_TYPES), default="diagonal")
     args = parser.parse_args(argv)
 
     heatmap_run_root = args.heatmap_run_root.resolve()
-    default_output_name = "_lastn_tailk_grid_search" if args.direction == "rows" else "_coln_tailk_grid_search"
+    if args.matrix_type == "diagonal":
+        default_output_name = "_lastn_tailk_grid_search" if args.direction == "rows" else "_coln_tailk_grid_search"
+    else:
+        suffix = "rows" if args.direction == "rows" else "cols"
+        default_output_name = f"_{args.matrix_type}_{suffix}_grid_search"
     output_dir = (args.output_dir or (heatmap_run_root / default_output_name)).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
     vbench_rows = _load_vbench_rows(args.vbench_long_csv.resolve())
-    seed_records, max_rows, max_cols = _load_seed_records(heatmap_run_root, vbench_rows)
+    seed_records, max_rows, max_cols = _load_seed_records(heatmap_run_root, vbench_rows, args.matrix_type)
 
     max_window = max_rows if args.direction == "rows" else max_cols
     last_n_values = list(range(1, (args.max_last_n or max_window) + 1))
     tail_fractions = _parse_tail_fractions(args.tail_fractions) if args.tail_fractions else _default_tail_fractions()
 
-    rows = _compute_alignment_rows(seed_records, last_n_values, tail_fractions, args.direction)
+    rows = _compute_alignment_rows(seed_records, last_n_values, tail_fractions, args.direction, args.matrix_type)
     rows = sorted(
         rows,
         key=lambda row: (
@@ -359,6 +383,7 @@ def main(argv: list[str] | None = None) -> None:
         "available_heatmaps": len(seed_records),
         "max_heatmap_rows": max_rows,
         "max_heatmap_cols": max_cols,
+        "matrix_type": args.matrix_type,
         "direction": args.direction,
         "searched_last_n": last_n_values,
         "searched_tail_k": tail_fractions,

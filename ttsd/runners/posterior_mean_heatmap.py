@@ -1,4 +1,4 @@
-"""Build a posterior-mean DINOv2 similarity heatmap for one seed.
+"""Build posterior-mean DINOv2 similarity heatmaps for one seed.
 
 Usage:
     python -m ttsd.runners.posterior_mean_heatmap \
@@ -112,15 +112,41 @@ def _compute_diagonal_similarity(feature_grid: np.ndarray) -> np.ndarray:
     return np.sum(current * next_diag, axis=-1)
 
 
-def _save_heatmap(similarity: np.ndarray, step_labels: list[str], output_path: Path) -> None:
+def _compute_frame_neighbor_similarity(feature_grid: np.ndarray) -> np.ndarray:
+    current = feature_grid[:, :-1, :]
+    next_frame = feature_grid[:, 1:, :]
+    return np.sum(current * next_frame, axis=-1)
+
+
+def _compute_posterior_neighbor_similarity(feature_grid: np.ndarray) -> np.ndarray:
+    current = feature_grid[:-1, :, :]
+    next_posterior = feature_grid[1:, :, :]
+    return np.sum(current * next_posterior, axis=-1)
+
+
+def _save_heatmap(
+    similarity: np.ndarray,
+    step_labels: list[str],
+    output_path: Path,
+    *,
+    title: str,
+    xlabel: str,
+    ylabel: str,
+    ytick_mode: str,
+) -> None:
     fig, ax = plt.subplots(figsize=(14, 5))
     image = ax.imshow(similarity, aspect="auto", cmap="viridis", vmin=-1.0, vmax=1.0)
-    ax.set_xlabel("Frame index")
-    ax.set_ylabel("Posterior-mean step transition")
-    ax.set_title("DINOv2 diagonal neighbor cosine similarity")
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
     ax.set_xticks(np.arange(similarity.shape[1]))
     ax.set_yticks(np.arange(similarity.shape[0]))
-    ax.set_yticklabels([f"{step_labels[i]}->{step_labels[i + 1]}" for i in range(len(step_labels) - 1)])
+    if ytick_mode == "transitions":
+        ax.set_yticklabels([f"{step_labels[i]}->{step_labels[i + 1]}" for i in range(len(step_labels) - 1)])
+    elif ytick_mode == "steps":
+        ax.set_yticklabels(step_labels)
+    else:
+        raise ValueError(f"Unsupported ytick_mode: {ytick_mode}")
     fig.colorbar(image, ax=ax, label="cosine similarity")
     fig.tight_layout()
     fig.savefig(output_path, dpi=200)
@@ -146,15 +172,52 @@ def main(argv: list[str] | None = None) -> None:
         batch_size=args.batch_size,
         candidate_devices=candidate_devices,
     )
-    similarity = _compute_diagonal_similarity(feature_grid)
+    diagonal_similarity = _compute_diagonal_similarity(feature_grid)
+    frame_neighbor_similarity = _compute_frame_neighbor_similarity(feature_grid)
+    posterior_neighbor_similarity = _compute_posterior_neighbor_similarity(feature_grid)
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    matrix_path = args.output_dir / "posterior_mean_diagonal_similarity.npy"
-    heatmap_path = args.output_dir / "posterior_mean_diagonal_similarity_heatmap.png"
-    metadata_path = args.output_dir / "posterior_mean_diagonal_similarity_metadata.json"
+    diagonal_matrix_path = args.output_dir / "posterior_mean_diagonal_similarity.npy"
+    diagonal_heatmap_path = args.output_dir / "posterior_mean_diagonal_similarity_heatmap.png"
+    frame_matrix_path = args.output_dir / "posterior_mean_frame_neighbor_similarity.npy"
+    frame_heatmap_path = args.output_dir / "posterior_mean_frame_neighbor_similarity_heatmap.png"
+    posterior_matrix_path = args.output_dir / "posterior_mean_posterior_neighbor_similarity.npy"
+    posterior_heatmap_path = args.output_dir / "posterior_mean_posterior_neighbor_similarity_heatmap.png"
+    features_path = args.output_dir / "posterior_mean_features.npy"
+    metadata_path = args.output_dir / "posterior_mean_similarity_metadata.json"
 
-    np.save(matrix_path, similarity)
-    _save_heatmap(similarity, step_labels, heatmap_path)
+    np.save(diagonal_matrix_path, diagonal_similarity)
+    np.save(frame_matrix_path, frame_neighbor_similarity)
+    np.save(posterior_matrix_path, posterior_neighbor_similarity)
+    # store as float16 to keep disk usage modest (~1.4 MB per seed)
+    np.save(features_path, feature_grid.astype(np.float16))
+    _save_heatmap(
+        diagonal_similarity,
+        step_labels,
+        diagonal_heatmap_path,
+        title="DINOv2 diagonal neighbor cosine similarity",
+        xlabel="Frame index",
+        ylabel="Posterior-mean step transition",
+        ytick_mode="transitions",
+    )
+    _save_heatmap(
+        frame_neighbor_similarity,
+        step_labels,
+        frame_heatmap_path,
+        title="DINOv2 frame-neighbor cosine similarity",
+        xlabel="Frame transition",
+        ylabel="Posterior-mean step",
+        ytick_mode="steps",
+    )
+    _save_heatmap(
+        posterior_neighbor_similarity,
+        step_labels,
+        posterior_heatmap_path,
+        title="DINOv2 posterior-neighbor cosine similarity",
+        xlabel="Frame index",
+        ylabel="Posterior-mean step transition",
+        ytick_mode="transitions",
+    )
 
     metadata = {
         "posterior_mean_video_dir": str(args.posterior_mean_video_dir.resolve()),
@@ -165,18 +228,45 @@ def main(argv: list[str] | None = None) -> None:
             "n": int(feature_grid.shape[1]),
             "d": int(feature_grid.shape[2]),
         },
-        "similarity_shape": list(similarity.shape),
         "step_labels": step_labels,
-        "definition": "similarity[i, j] = cosine(feature[i, j], feature[i + 1, j + 1])",
+        "features": {
+            "path": str(features_path.resolve()),
+            "dtype": "float16",
+            "shape": list(feature_grid.shape),
+            "definition": "DINOv2 CLS feature[posterior_step, frame_index, :], L2-normalized",
+        },
+        "matrices": {
+            "diagonal": {
+                "shape": list(diagonal_similarity.shape),
+                "definition": "diagonal[i, j] = cosine(feature[i, j], feature[i + 1, j + 1])",
+                "matrix_path": str(diagonal_matrix_path.resolve()),
+                "heatmap_path": str(diagonal_heatmap_path.resolve()),
+            },
+            "frame_neighbor": {
+                "shape": list(frame_neighbor_similarity.shape),
+                "definition": "frame_neighbor[i, j] = cosine(feature[i, j], feature[i, j + 1])",
+                "matrix_path": str(frame_matrix_path.resolve()),
+                "heatmap_path": str(frame_heatmap_path.resolve()),
+            },
+            "posterior_neighbor": {
+                "shape": list(posterior_neighbor_similarity.shape),
+                "definition": "posterior_neighbor[i, j] = cosine(feature[i, j], feature[i + 1, j])",
+                "matrix_path": str(posterior_matrix_path.resolve()),
+                "heatmap_path": str(posterior_heatmap_path.resolve()),
+            },
+        },
     }
     metadata_path.write_text(json.dumps(metadata, indent=2))
 
     print(json.dumps({
-        "matrix_path": str(matrix_path),
-        "heatmap_path": str(heatmap_path),
+        "diagonal_matrix_path": str(diagonal_matrix_path),
+        "frame_matrix_path": str(frame_matrix_path),
+        "posterior_matrix_path": str(posterior_matrix_path),
         "metadata_path": str(metadata_path),
         "used_device": used_device,
-        "similarity_shape": list(similarity.shape),
+        "diagonal_similarity_shape": list(diagonal_similarity.shape),
+        "frame_neighbor_shape": list(frame_neighbor_similarity.shape),
+        "posterior_neighbor_shape": list(posterior_neighbor_similarity.shape),
     }, indent=2))
 
 

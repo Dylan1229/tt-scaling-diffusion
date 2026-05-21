@@ -12,19 +12,19 @@ Usage:
     --output-run-root /path/to/output/root
 
 Optional:
-  --gpu-indices 4,5
+  --gpu-indices 4,5,6,7
   --batch-size 32
   --limit N
   --skip-existing
 
-This script processes all decoded posterior-mean seed directories using exactly
-two workers, each pinned to one physical GPU.
+This script processes all decoded posterior-mean seed directories using one
+worker per selected physical GPU.
 EOF
 }
 
 DECODED_RUN_ROOT=""
 OUTPUT_RUN_ROOT=""
-GPU_INDICES="4,5"
+GPU_INDICES="4,5,6,7"
 BATCH_SIZE=32
 LIMIT=""
 SKIP_EXISTING=0
@@ -80,8 +80,8 @@ if [[ ! -x .venv/bin/python ]]; then
 fi
 
 IFS=',' read -r -a gpu_array <<< "$GPU_INDICES"
-if [[ "${#gpu_array[@]}" -ne 2 ]]; then
-  echo "--gpu-indices must contain exactly 2 physical GPU indices" >&2
+if [[ "${#gpu_array[@]}" -lt 1 ]]; then
+  echo "--gpu-indices must contain at least 1 physical GPU index" >&2
   exit 1
 fi
 
@@ -119,7 +119,12 @@ run_worker() {
     rel_path="${seed_dir#${DECODED_RUN_ROOT}/}"
     output_dir="$OUTPUT_RUN_ROOT/$rel_path"
 
-    if [[ "$SKIP_EXISTING" -eq 1 && -f "$output_dir/posterior_mean_diagonal_similarity.npy" && -f "$output_dir/posterior_mean_diagonal_similarity_heatmap.png" && -f "$output_dir/posterior_mean_diagonal_similarity_metadata.json" ]]; then
+    if [[ "$SKIP_EXISTING" -eq 1 \
+      && -f "$output_dir/posterior_mean_diagonal_similarity.npy" \
+      && -f "$output_dir/posterior_mean_frame_neighbor_similarity.npy" \
+      && -f "$output_dir/posterior_mean_posterior_neighbor_similarity.npy" \
+      && -f "$output_dir/posterior_mean_features.npy" \
+      && -f "$output_dir/posterior_mean_similarity_metadata.json" ]]; then
       echo "[posterior_heatmap_batch gpu${gpu_index}] skip $rel_path"
       continue
     fi
@@ -137,12 +142,14 @@ run_worker() {
   done
 }
 
-run_worker 0 "${gpu_array[0]}" &
-pid0=$!
-run_worker 1 "${gpu_array[1]}" &
-pid1=$!
+worker_pids=()
+for worker_id in "${!gpu_array[@]}"; do
+  run_worker "$worker_id" "${gpu_array[$worker_id]}" &
+  worker_pids+=("$!")
+done
 
-wait "$pid0"
-wait "$pid1"
+for pid in "${worker_pids[@]}"; do
+  wait "$pid"
+done
 
 echo "[posterior_heatmap_batch] done"

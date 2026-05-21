@@ -14,7 +14,7 @@ Usage:
 
 Optional:
   --session-name posterior-mean-heatmap-batch
-  --gpu-indices 4,5
+  --gpu-indices 4,5,6,7
   --batch-size 32
   --limit N
   --skip-existing
