@@ -187,63 +187,63 @@ def main(argv: list[str] | None = None) -> None:
         if (out_dir / "DONE").exists():
             print(f"[baseline] SKIP {prompt['id']} seed={seed} (already done)")
             continue
-            out_dir.mkdir(parents=True, exist_ok=True)
-            (out_dir / "latents").mkdir(exist_ok=True)
-            if capture_posterior_means:
-                (out_dir / "posterior_means").mkdir(exist_ok=True)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        (out_dir / "latents").mkdir(exist_ok=True)
+        if capture_posterior_means:
+            (out_dir / "posterior_means").mkdir(exist_ok=True)
 
-            print(f"[baseline] ▶ {prompt['id']} seed={seed} :: {prompt['text'][:60]}…")
-            if capture_posterior_means:
-                result = adapter.generate_with_posterior_means(
-                    prompt=prompt["text"],
-                    seed=seed,
-                    num_frames=gen_cfg["num_frames"],
-                    height=height,
-                    width=width,
-                    num_inference_steps=gen_cfg["num_inference_steps"],
-                    guidance_scale=gen_cfg["guidance_scale"],
-                    snapshot_steps=snapshot_steps,
-                    posterior_mean_steps=posterior_mean_steps,
-                )
-            else:
-                result = adapter.generate(
-                    prompt=prompt["text"],
-                    seed=seed,
-                    num_frames=gen_cfg["num_frames"],
-                    height=height,
-                    width=width,
-                    num_inference_steps=gen_cfg["num_inference_steps"],
-                    guidance_scale=gen_cfg["guidance_scale"],
-                    snapshot_steps=snapshot_steps,
-                )
-
-            if out_cfg.get("save_video", True):
-                _save_video(result.frames, out_dir / "video.mp4")
-            if out_cfg.get("save_latents", True):
-                for step_idx, latent in result.latents_by_step.items():
-                    torch.save(latent, out_dir / "latents" / f"step_{step_idx:03d}.pt")
-            if capture_posterior_means:
-                for step_idx, posterior in result.posterior_means_by_step.items():
-                    torch.save(posterior, out_dir / "posterior_means" / f"step_{step_idx:03d}.pt")
-
-            meta = RunMeta(
-                prompt_id=prompt["id"],
-                prompt_text=prompt["text"],
-                axis=prompt.get("axis", ""),
+        print(f"[baseline] ▶ {prompt['id']} seed={seed} :: {prompt['text'][:60]}…")
+        if capture_posterior_means:
+            result = adapter.generate_with_posterior_means(
+                prompt=prompt["text"],
                 seed=seed,
-                model=model_cfg["name"],
+                num_frames=gen_cfg["num_frames"],
                 height=height,
                 width=width,
-                num_frames=gen_cfg["num_frames"],
                 num_inference_steps=gen_cfg["num_inference_steps"],
                 guidance_scale=gen_cfg["guidance_scale"],
                 snapshot_steps=snapshot_steps,
-                timestamp=dt.datetime.now().isoformat(timespec="seconds"),
-                capture_posterior_means=capture_posterior_means,
-                posterior_mean_steps=posterior_mean_steps if capture_posterior_means else None,
+                posterior_mean_steps=posterior_mean_steps,
             )
-            (out_dir / "meta.json").write_text(json.dumps(asdict(meta), indent=2))
-            (out_dir / "DONE").touch()
+        else:
+            result = adapter.generate(
+                prompt=prompt["text"],
+                seed=seed,
+                num_frames=gen_cfg["num_frames"],
+                height=height,
+                width=width,
+                num_inference_steps=gen_cfg["num_inference_steps"],
+                guidance_scale=gen_cfg["guidance_scale"],
+                snapshot_steps=snapshot_steps,
+            )
+
+        if out_cfg.get("save_video", True):
+            _save_video(result.frames, out_dir / "video.mp4")
+        if out_cfg.get("save_latents", True):
+            for step_idx, latent in result.latents_by_step.items():
+                torch.save(latent, out_dir / "latents" / f"step_{step_idx:03d}.pt")
+        if capture_posterior_means:
+            for step_idx, posterior in result.posterior_means_by_step.items():
+                torch.save(posterior, out_dir / "posterior_means" / f"step_{step_idx:03d}.pt")
+
+        meta = RunMeta(
+            prompt_id=prompt["id"],
+            prompt_text=prompt["text"],
+            axis=prompt.get("axis", ""),
+            seed=seed,
+            model=model_cfg["name"],
+            height=height,
+            width=width,
+            num_frames=gen_cfg["num_frames"],
+            num_inference_steps=gen_cfg["num_inference_steps"],
+            guidance_scale=gen_cfg["guidance_scale"],
+            snapshot_steps=snapshot_steps,
+            timestamp=dt.datetime.now().isoformat(timespec="seconds"),
+            capture_posterior_means=capture_posterior_means,
+            posterior_mean_steps=posterior_mean_steps if capture_posterior_means else None,
+        )
+        (out_dir / "meta.json").write_text(json.dumps(asdict(meta), indent=2))
+        (out_dir / "DONE").touch()
 
     print(f"[baseline] done. outputs under {run_root}")
 
