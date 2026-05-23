@@ -312,6 +312,7 @@ def main() -> None:
     for i, r in enumerate(records):
         prompt_to_idx[r["prompt_id"]].append(i)
 
+    n_prompts = len(prompt_to_idx)
     metric_keys = [k for k in records[0].keys() if k.startswith(("patch_", "finalpost_"))]
     rows = []
     for k in metric_keys:
@@ -320,10 +321,39 @@ def main() -> None:
             ss = sign * s
             rows.append((k, sign, _within(ss, y, prompt_to_idx), _winner_match(ss, y, prompt_to_idx)))
     rows.sort(key=lambda r: -abs(r[2]))
-    print(f"{'metric':<48} {'sign':>4} {'sp_within':>10} {'WM':>5}")
-    print("-" * 70)
+    wm_w = len(str(n_prompts)) * 2 + 1
+    print(f"{'metric':<48} {'sign':>4} {'sp_within':>10} {'WM':>{wm_w}}")
+    print("-" * (66 + wm_w))
     for k, sign, sp, wm in rows:
-        print(f"{k:<48} {sign:>4} {sp:>10.4f} {wm:>3}/15")
+        print(f"{k:<48} {sign:>4} {sp:>10.4f} {wm:>{wm_w - len(str(n_prompts)) - 1}}/{n_prompts}")
+
+    sizes = sorted({len(ps) for ps in prompt_to_idx.values()})
+    if len(sizes) > 1:
+        pooled_order = [(r[0], r[1]) for r in rows]
+        for sz in sizes:
+            bucket_recs = [r for r in records if len(prompt_to_idx[r["prompt_id"]]) == sz]
+            pti_sub: dict[str, list[int]] = defaultdict(list)
+            for i, r in enumerate(bucket_recs):
+                pti_sub[r["prompt_id"]].append(i)
+            n_sub = len(pti_sub)
+            y_sub = np.array([r["avg_vbench_z"] for r in bucket_recs])
+            bucket_stats: dict[tuple[str, int], tuple[float, int]] = {}
+            for k in metric_keys:
+                s_sub = np.array([r[k] for r in bucket_recs], float)
+                for sign in (1, -1):
+                    ss = sign * s_sub
+                    bucket_stats[(k, sign)] = (
+                        _within(ss, y_sub, pti_sub),
+                        _winner_match(ss, y_sub, pti_sub),
+                    )
+            wm_w_b = len(str(n_sub)) * 2 + 1
+            print()
+            print(f"--- bucket n={sz} ({n_sub} prompts) ---")
+            print(f"{'metric':<48} {'sign':>4} {'sp_within':>10} {'WM':>{wm_w_b}}")
+            print("-" * (66 + wm_w_b))
+            for k, sign in pooled_order:
+                sp, wm = bucket_stats[(k, sign)]
+                print(f"{k:<48} {sign:>4} {sp:>10.4f} {wm:>{wm_w_b - len(str(n_sub)) - 1}}/{n_sub}")
 
 
 if __name__ == "__main__":

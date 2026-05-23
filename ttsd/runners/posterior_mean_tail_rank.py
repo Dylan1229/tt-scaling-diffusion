@@ -144,8 +144,10 @@ def _rank_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
                 int(row["seed_idx"]),
             ),
         )
+        prompt_size = len(ordered)
         for rank, row in enumerate(ordered, start=1):
             row["tail_mean_rank"] = rank
+            row["prompt_size"] = prompt_size
             ranked_rows.append(row)
     return ranked_rows
 
@@ -207,6 +209,7 @@ def main(argv: list[str] | None = None) -> None:
         "prompt_text",
         "axis",
         "seed_idx",
+        "prompt_size",
         "tail_mean_rank",
         "score_name",
         "score_value",

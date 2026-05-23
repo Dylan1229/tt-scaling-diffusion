@@ -92,13 +92,15 @@ def stage_videos_by_dimension(
         if d.exists():
             shutil.rmtree(d)
         d.mkdir(parents=True)
-        # Group by prompt to assign sequential seed indices for the filename suffix.
+        # Bake the raw seed into the filename so `aggregate_to_csv` can recover
+        # it. Earlier versions used a sequential per-prompt index, which silently
+        # mislabels the CSV's `seed_idx` whenever seeds aren't 0..N-1.
         per_prompt: dict[str, list[tuple[int, Path]]] = defaultdict(list)
         for prompt, seed, video in clips:
             per_prompt[prompt].append((seed, video))
         for prompt, items in per_prompt.items():
-            for idx, (_seed, video) in enumerate(sorted(items)):
-                fname = f"{_slug(prompt)}-{idx}.mp4"
+            for seed, video in sorted(items):
+                fname = f"{_slug(prompt)}-seed{seed:04d}.mp4"
                 (d / fname).symlink_to(video.resolve())
         out[dim] = d
     return out
@@ -178,8 +180,8 @@ def aggregate_to_csv(
             continue
 
         for vp, score in per_video:
-            stem = Path(vp).stem  # "<prompt_text>-<idx>"
-            m = re.match(r"^(.*)-(\d+)$", stem)
+            stem = Path(vp).stem  # "<prompt_text>-seed<NNNN>"
+            m = re.match(r"^(.*)-seed(\d+)$", stem)
             prompt_text = m.group(1) if m else stem
             seed_idx = int(m.group(2)) if m else -1
             meta = text_to_meta.get(prompt_text, {})
@@ -261,11 +263,9 @@ def main(argv: list[str] | None = None) -> None:
         if all_dir.exists():
             shutil.rmtree(all_dir)
         all_dir.mkdir(parents=True)
-        per_prompt_seq: dict[str, int] = defaultdict(int)
         for meta, video in _iter_clips(run_dir):
-            i = per_prompt_seq[meta["prompt_text"]]
-            per_prompt_seq[meta["prompt_text"]] += 1
-            (all_dir / f"{_slug(meta['prompt_text'])}-{i}.mp4").symlink_to(video.resolve())
+            fname = f"{_slug(meta['prompt_text'])}-seed{int(meta['seed']):04d}.mp4"
+            (all_dir / fname).symlink_to(video.resolve())
     else:
         per_axis_staging = {d: staging_root / d for d in dimensions if (staging_root / d).exists()}
 

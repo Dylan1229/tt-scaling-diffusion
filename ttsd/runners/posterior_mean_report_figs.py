@@ -156,21 +156,55 @@ def main():
             out[idx] -= out[idx].mean()
         return out
 
+    prompt_size = {p: len(g) for p, g in by_p.items()}
+    sizes = sorted(set(prompt_size.values()))
+    bucket_idx = {sz: np.array([i for i, r in enumerate(records)
+                                if prompt_size[r["prompt_id"]] == sz])
+                  for sz in sizes}
+
+    # Prompt-mean Spearman: per-prompt rank correlation, averaged across prompts in
+    # the subset. Matches metric_grid_search.py and ridge_feature_model.py.
+    prompt_ids = [r["prompt_id"] for r in records]
+
+    def _rho_w_subset(x, y_, idx):
+        by_p = defaultdict(list)
+        for i in idx:
+            by_p[prompt_ids[int(i)]].append(int(i))
+        rhos = []
+        for p_idx in by_p.values():
+            if len(p_idx) < 2:
+                continue
+            xb = x[p_idx]; yb = y_[p_idx]
+            ra = _rankdata(xb); rb = _rankdata(yb)
+            ra -= ra.mean(); rb -= rb.mean()
+            denom = float(np.sqrt((ra ** 2).sum() * (rb ** 2).sum()))
+            if denom <= 0:
+                continue
+            rhos.append(float((ra * rb).sum() / denom))
+        return float(np.mean(rhos)) if rhos else float("nan")
+
     y = _wpr("avg_vbench_z")
     metrics = [
         ("f_tail80", r"frame consistency  $f_\mathrm{tail80}$"),
         ("finalpost_velcos_pm_mean", r"velocity-to-final cos  $\bar c_\mathrm{vel\to T}$"),
     ]
+    all_idx = np.arange(len(records))
+    scatter_rhos: dict[str, dict[str, float]] = {}
     fig, axes = plt.subplots(1, 2, figsize=(8, 3.2), constrained_layout=True)
     for ax, (k, ttl) in zip(axes, metrics):
         x = _wpr(k)
-        ra = _rankdata(x); rb = _rankdata(y)
-        ra -= ra.mean(); rb -= rb.mean()
-        sp = float((ra * rb).sum() / (np.sqrt((ra**2).sum() * (rb**2).sum()) + 1e-12))
+        sp = _rho_w_subset(x, y, all_idx)
+        bucket_sps = {sz: _rho_w_subset(x, y, bucket_idx[sz]) for sz in sizes}
+        scatter_rhos[k] = {"pooled": sp, **{f"n{sz}": v for sz, v in bucket_sps.items()}}
         ax.scatter(x, y, s=14, alpha=0.65, edgecolor="none")
         ax.axhline(0, color="grey", lw=0.5); ax.axvline(0, color="grey", lw=0.5)
         sgn = "+" if sp > 0 else r"$-$"
-        ax.set_title(f"{ttl}\n($\\rho_w$ = {sp:+.3f}, {sgn} correlated)", fontsize=9)
+        if len(sizes) > 1:
+            bucket_str = "; " + " / ".join(f"{bucket_sps[sz]:+.3f} (n={sz})" for sz in sizes)
+            ax.set_title(f"{ttl}\n($\\rho_w$ = {sp:+.3f} all{bucket_str}, {sgn} correlated)",
+                         fontsize=7)
+        else:
+            ax.set_title(f"{ttl}\n($\\rho_w$ = {sp:+.3f}, {sgn} correlated)", fontsize=9)
         ax.set_xlabel("within-prompt centered metric")
     axes[0].set_ylabel("within-prompt avg VBench z")
     fig.savefig(args.output_dir / "fig_scalar_scatter.png", dpi=140)
@@ -182,6 +216,7 @@ def main():
         "good_seed": good["seed_idx"], "good_z": good["avg_vbench_z"],
         "bad_seed": bad["seed_idx"], "bad_z": bad["avg_vbench_z"],
         "n_seeds": len(records),
+        "rho_w": scatter_rhos,
     }
     (args.output_dir / "metrics_summary.json").write_text(json.dumps(out_json, indent=2))
     print(f"[fig] wrote figures to {args.output_dir}")
