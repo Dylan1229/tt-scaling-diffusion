@@ -24,7 +24,6 @@ Properties probed (each one is a single scalar):
 from __future__ import annotations
 
 import argparse
-import math
 from collections import defaultdict
 from pathlib import Path
 
@@ -48,17 +47,19 @@ SUBSCORES = [
 ]
 
 
-def _spearman(a: np.ndarray, b: np.ndarray) -> float:
-    ra = _rankdata(a) - (len(a) + 1) / 2.0
-    rb = _rankdata(b) - (len(b) + 1) / 2.0
-    return float((ra * rb).sum() / (math.sqrt((ra**2).sum() * (rb**2).sum()) + 1e-12))
-
-
 def _within(score: np.ndarray, y: np.ndarray, prompt_to_idx: dict[str, list[int]]) -> float:
-    s = score.copy(); yy = y.copy()
+    rhos = []
     for ps in prompt_to_idx.values():
-        s[ps] -= s[ps].mean(); yy[ps] -= yy[ps].mean()
-    return _spearman(s, yy)
+        if len(ps) < 2:
+            continue
+        sv = score[ps]; mv = y[ps]
+        ra = _rankdata(sv); rb = _rankdata(mv)
+        ra -= ra.mean(); rb -= rb.mean()
+        denom = float(np.sqrt((ra ** 2).sum() * (rb ** 2).sum()))
+        if denom <= 0:
+            continue
+        rhos.append(float((ra * rb).sum() / denom))
+    return float(np.mean(rhos)) if rhos else float("nan")
 
 
 def _winner_match(score: np.ndarray, y: np.ndarray, prompt_to_idx: dict[str, list[int]]) -> int:
