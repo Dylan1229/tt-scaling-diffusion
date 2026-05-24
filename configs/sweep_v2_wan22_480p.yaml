@@ -9,6 +9,12 @@ model:
   path: /data/datasets/fanjiang/.cache/huggingface/hub/models--Wan-AI--Wan2.2-TI2V-5B-Diffusers
   dtype: bf16
   device: cuda                # CUDA_VISIBLE_DEVICES picks the physical GPU per shard
+  # Sampler family. Options:
+  #   unipc     - deterministic ODE, 2nd-order multistep (Wan 2.2 bundled default)
+  #   euler     - deterministic ODE, 1st-order Euler (same-family ablation control)
+  #   euler_sde - SDE: Euler step + ancestral noise injection at every step
+  # `flow_shift` from the bundled scheduler config is preserved across kinds.
+  scheduler: unipc
 
 generation:
   resolution: [480, 832]      # H, W — Wan 2.2 480p default

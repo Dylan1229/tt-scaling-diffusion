@@ -41,6 +41,7 @@ class RunMeta:
     timestamp: str
     capture_posterior_means: bool = False
     posterior_mean_steps: list[int] | None = None
+    scheduler: str = "unipc"
 
 
 def _load_prompts(spec: str) -> list[dict]:
@@ -123,7 +124,13 @@ def main(argv: list[str] | None = None) -> None:
     out_cfg = cfg["output"]
 
     dtype = {"bf16": torch.bfloat16, "fp16": torch.float16, "fp32": torch.float32}[model_cfg["dtype"]]
-    adapter = Wan22Adapter(model_path=model_cfg["path"], dtype=dtype, device=model_cfg["device"])
+    scheduler_kind = model_cfg.get("scheduler", "unipc")
+    adapter = Wan22Adapter(
+        model_path=model_cfg["path"],
+        dtype=dtype,
+        device=model_cfg["device"],
+        scheduler_kind=scheduler_kind,
+    )
 
     prompts = _load_prompts(cfg["prompts"]["source"])
     default_seeds = [cfg["seeds"]["base"] + i for i in range(cfg["seeds"]["count"])]
@@ -179,6 +186,7 @@ def main(argv: list[str] | None = None) -> None:
     print(f"[baseline] total clips across all shards: {total_clips}; this shard: {len(work)}{shard_tag}")
     print(f"[baseline] snapshotting steps: {snapshot_steps}")
     print(f"[baseline] capture posterior means: {capture_posterior_means}")
+    print(f"[baseline] scheduler: {scheduler_kind}")
 
     height, width = gen_cfg["resolution"]
 
@@ -241,6 +249,7 @@ def main(argv: list[str] | None = None) -> None:
             timestamp=dt.datetime.now().isoformat(timespec="seconds"),
             capture_posterior_means=capture_posterior_means,
             posterior_mean_steps=posterior_mean_steps if capture_posterior_means else None,
+            scheduler=scheduler_kind,
         )
         (out_dir / "meta.json").write_text(json.dumps(asdict(meta), indent=2))
         (out_dir / "DONE").touch()

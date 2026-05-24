@@ -1,0 +1,39 @@
+# Sweep v2 — SDE variant.
+# Identical to sweep_v2_wan22_480p.yaml EXCEPT for the sampler family:
+#   scheduler: euler_sde
+# Lets us A/B compare ODE (UniPC) vs SDE (FlowMatchEuler ancestral) on the
+# same 30-prompt × variable-seed set with posterior-mean capture.
+#
+# Launch into a separate run-id so outputs don't collide with the ODE run.
+
+model:
+  name: wan22_ti2v_5b
+  path: /data/datasets/fanjiang/.cache/huggingface/hub/models--Wan-AI--Wan2.2-TI2V-5B-Diffusers
+  dtype: bf16
+  device: cuda
+  scheduler: euler_sde
+
+generation:
+  resolution: [480, 832]
+  num_frames: 81
+  num_inference_steps: 50
+  guidance_scale: 5.0
+
+prompts:
+  source: ttsd.prompts.sweep_v2:SWEEP_V2_PROMPTS
+
+seeds:
+  count: 1
+  base: 0
+
+snapshots:
+  every_n_steps: 5
+  also_keep: [1, 49]
+  posterior_means: true
+
+output:
+  root: runs/baseline
+  run_id: null
+  save_video: true
+  save_latents: true
+  save_meta: true

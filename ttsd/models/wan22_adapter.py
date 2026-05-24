@@ -18,9 +18,51 @@ DEFAULT_MODEL_PATH = (
     "models--Wan-AI--Wan2.2-TI2V-5B-Diffusers"
 )
 
+# Supported sampler families:
+#   "unipc"      — UniPCMultistepScheduler, deterministic 2nd-order ODE.
+#                  This is Wan 2.2's bundled default.
+#   "euler"      — FlowMatchEulerDiscreteScheduler, deterministic 1st-order ODE.
+#                  Useful as a same-family ODE control when ablating against SDE.
+#   "euler_sde"  — FlowMatchEulerDiscreteScheduler with stochastic_sampling=True.
+#                  True SDE: Euler step + ancestral Gaussian noise injection at
+#                  every step. Reproducible via the seeded torch.Generator.
+SCHEDULER_KINDS = ("unipc", "euler", "euler_sde")
+DEFAULT_SCHEDULER_KIND = "unipc"
+
 
 def _resolved_model_path() -> str:
     return os.environ.get("WAN22_MODEL_PATH", DEFAULT_MODEL_PATH)
+
+
+def _build_alt_scheduler(orig_config, kind: str):
+    """Build a replacement scheduler that preserves the model's trained-time
+    schedule (num_train_timesteps + flow shift) but switches solver family."""
+    if kind == "unipc":
+        return None  # keep the model's bundled scheduler
+    from diffusers import FlowMatchEulerDiscreteScheduler
+
+    if kind in ("euler", "euler_sde"):
+        return FlowMatchEulerDiscreteScheduler(
+            num_train_timesteps=getattr(orig_config, "num_train_timesteps", 1000),
+            shift=getattr(orig_config, "flow_shift", 1.0),
+            stochastic_sampling=(kind == "euler_sde"),
+        )
+    raise ValueError(f"unknown scheduler kind: {kind!r}; expected one of {SCHEDULER_KINDS}")
+
+
+def _posterior_mean_from_step(scheduler, model_output, sample, step_idx: int) -> torch.Tensor:
+    """Recover x0_hat = E[x_0 | x_t, c] from scheduler state + model output.
+
+    - UniPC: use the scheduler's own `convert_model_output` (handles
+      flow_prediction parametrization internally).
+    - FlowMatchEuler (no convert_model_output): use the closed-form flow-matching
+      identity `x_0 = x_t - sigma * v_theta`. `sigma` is the current sigma read
+      from `scheduler.sigmas[step_idx]`.
+    """
+    if hasattr(scheduler, "convert_model_output"):
+        return scheduler.convert_model_output(model_output, sample=sample)
+    sigma = scheduler.sigmas[step_idx].to(device=sample.device, dtype=sample.dtype)
+    return sample - sigma * model_output
 
 
 @dataclass
@@ -31,17 +73,28 @@ class GenerationOutput:
 
 
 class Wan22Adapter:
-    """Wraps `diffusers.WanPipeline` (or the unified TI2V pipeline) for T2V mode."""
+    """Wraps `diffusers.WanPipeline` (or the unified TI2V pipeline) for T2V mode.
+
+    `scheduler_kind` selects the sampler family (see SCHEDULER_KINDS). The model's
+    trained-time schedule (flow shift, num_train_timesteps) is preserved when
+    swapping; only the solver discretization changes.
+    """
 
     def __init__(
         self,
         model_path: str | None = None,
         dtype: torch.dtype = torch.bfloat16,
         device: str = "cuda",
+        scheduler_kind: str = DEFAULT_SCHEDULER_KIND,
     ):
+        if scheduler_kind not in SCHEDULER_KINDS:
+            raise ValueError(
+                f"scheduler_kind={scheduler_kind!r} not in {SCHEDULER_KINDS}"
+            )
         self.model_path = model_path or _resolved_model_path()
         self.dtype = dtype
         self.device = device
+        self.scheduler_kind = scheduler_kind
         self._pipe = None  # lazily loaded
 
     def _load(self):
@@ -59,6 +112,11 @@ class Wan22Adapter:
                 path = os.path.join(snap_dir, snaps[-1])
 
         self._pipe = DiffusionPipeline.from_pretrained(path, torch_dtype=self.dtype)
+        # Optionally swap the bundled scheduler — done BEFORE .to(device) so
+        # any scheduler buffers also move to the GPU.
+        alt = _build_alt_scheduler(self._pipe.scheduler.config, self.scheduler_kind)
+        if alt is not None:
+            self._pipe.scheduler = alt
         self._pipe.to(self.device)
 
     @staticmethod
@@ -93,13 +151,27 @@ class Wan22Adapter:
         original_step = pipe.scheduler.step
         step_idx = 0
 
-        def wrapped_step(model_output, timestep, sample, return_dict=True):
+        def wrapped_step(*args, **kwargs):
+            """Generic wrapper — forwards every arg/kwarg the pipeline passes to
+            the underlying scheduler.step (signatures differ across UniPC and
+            FlowMatchEuler; we just splat). We extract `model_output` (first
+            positional) and `sample` (third positional or `sample=` kwarg) for
+            the posterior-mean computation."""
             nonlocal step_idx
+            model_output = args[0] if args else kwargs["model_output"]
+            if len(args) >= 3:
+                sample = args[2]
+            elif "sample" in kwargs:
+                sample = kwargs["sample"]
+            else:
+                raise RuntimeError("scheduler.step called without a recognizable `sample` arg")
+
             if step_idx in posterior_set:
-                posterior = pipe.scheduler.convert_model_output(model_output, sample=sample)
+                posterior = _posterior_mean_from_step(pipe.scheduler, model_output, sample, step_idx)
                 posterior_means[step_idx] = self._capture_tensor(posterior)
 
-            result = original_step(model_output, timestep, sample, return_dict=return_dict)
+            result = original_step(*args, **kwargs)
+            return_dict = kwargs.get("return_dict", True)
             prev_sample = result.prev_sample if return_dict else result[0]
 
             if step_idx in snapshot_set:
