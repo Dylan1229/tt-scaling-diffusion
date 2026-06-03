@@ -17,6 +17,10 @@ where v_{s,k} is the L2-normalized patch-mean inter-frame velocity
 L2-normalize). Color scale is shared per-row (good/bad share vmin/vmax),
 matching the style of `runs/_report/fig_frame_heatmap_good_vs_bad.png`.
 
+It also prints to stdout a raw per-cell dump of the four matrices
+(good-D, good-L, bad-D, bad-L) for every prompt; redirect stdout to a .txt.
+Per-prompt log lines go to stderr.
+
 Usage:
     python -m ttsd.runners.posterior_mean_velocity_heatmaps \
         --patch-run-root runs/posterior_mean_patch_features/<rid> \
@@ -27,6 +31,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import sys
 from collections import defaultdict
 from pathlib import Path
 
@@ -95,6 +100,19 @@ def _imshow(ax, M, vmin, vmax, title):
     return im
 
 
+def _format_matrix(M: np.ndarray) -> str:
+    """Render a (steps x frame-pairs) matrix as a fixed-width text block.
+
+    Header row = frame-pair index k=0..N-1; row label = step s=1..steps.
+    """
+    n_pairs = M.shape[1]
+    label = "step\\k"
+    lines = [f"{label:>6}" + "".join(f"{k:>9d}" for k in range(n_pairs))]
+    for s in range(M.shape[0]):
+        lines.append(f"{s + 1:>6d}" + "".join(f"{M[s, k]:>+9.4f}" for k in range(n_pairs)))
+    return "\n".join(lines)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--patch-run-root", required=True, type=Path)
@@ -137,6 +155,12 @@ def main() -> None:
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
+    print(f"[velocity_heatmap_cells] {len(grouped)} prompts | good+bad seed each | "
+          f"D and L | shape 10 steps x 20 frame pairs")
+    print("[velocity_heatmap_cells] D[s,k] = <v_{s-1,k}, v_{s,k}>")
+    print("[velocity_heatmap_cells] L[s,k] = (1/s) sum_{r=0}^{s-1} <v_{r,k}, v_{s,k}>")
+    print()
+
     for prompt_id in sorted(grouped.keys()):
         group = grouped[prompt_id]
         good = max(group, key=lambda r: r["avg_vbench_z"])
@@ -166,9 +190,22 @@ def main() -> None:
         fig.savefig(args.output_dir / f"fig_{prompt_id}.png", dpi=140)
         plt.close(fig)
 
+        gi, bi = int(good["seed_idx"]), int(bad["seed_idx"])
+        print(f"==== prompt {prompt_id} ====")
+        print(f"good = seed{gi:04d} (avg_vbench_z = {good['avg_vbench_z']:+.4f})")
+        print(f"bad  = seed{bi:04d} (avg_vbench_z = {bad['avg_vbench_z']:+.4f})")
+        print()
+        for tag, M in [(f"good seed{gi:04d} | D step-adjacent", D_good),
+                       (f"good seed{gi:04d} | L prefix-lock", L_good),
+                       (f"bad seed{bi:04d} | D step-adjacent", D_bad),
+                       (f"bad seed{bi:04d} | L prefix-lock", L_bad)]:
+            print(f"-- {tag} --")
+            print(_format_matrix(M))
+        print()
+
         print(f"[velocity_heatmaps] {prompt_id}: "
-              f"good=seed{int(good['seed_idx']):04d} z={good['avg_vbench_z']:+.2f}  "
-              f"bad=seed{int(bad['seed_idx']):04d} z={bad['avg_vbench_z']:+.2f}")
+              f"good=seed{gi:04d} z={good['avg_vbench_z']:+.2f}  "
+              f"bad=seed{bi:04d} z={bad['avg_vbench_z']:+.2f}", file=sys.stderr)
 
 
 if __name__ == "__main__":

@@ -65,11 +65,35 @@ def _posterior_mean_from_step(scheduler, model_output, sample, step_idx: int) ->
     return sample - sigma * model_output
 
 
+def _scheduler_meta(scheduler) -> dict:
+    """Snapshot the coarse UniPC schedule + config needed to rebuild teacher sub-grids."""
+    cfg = scheduler.config
+
+    def _to_list(x):
+        return [float(v) for v in x.tolist()] if x is not None else None
+
+    return {
+        "sigmas": _to_list(getattr(scheduler, "sigmas", None)),
+        "timesteps": _to_list(getattr(scheduler, "timesteps", None)),
+        "flow_shift": float(getattr(cfg, "flow_shift", 0.0)),
+        "num_train_timesteps": int(cfg.num_train_timesteps),
+        "solver_order": int(cfg.solver_order),
+        "solver_type": cfg.solver_type,
+        "prediction_type": cfg.prediction_type,
+        "predict_x0": bool(cfg.predict_x0),
+        "final_sigmas_type": cfg.final_sigmas_type,
+        "use_flow_sigmas": bool(getattr(cfg, "use_flow_sigmas", False)),
+    }
+
+
 @dataclass
 class GenerationOutput:
     frames: torch.Tensor  # (T, H, W, 3) uint8 or float in [0, 1]
     latents_by_step: dict[int, torch.Tensor] = field(default_factory=dict)
     posterior_means_by_step: dict[int, torch.Tensor] = field(default_factory=dict)
+    raw_latents_by_step: dict[int, torch.Tensor] = field(default_factory=dict)
+    model_outputs_by_step: dict[int, torch.Tensor] = field(default_factory=dict)
+    scheduler_meta: dict = field(default_factory=dict)
 
 
 class Wan22Adapter:
@@ -135,19 +159,32 @@ class Wan22Adapter:
         guidance_scale: float = 5.0,
         snapshot_steps: Iterable[int] = (),
         posterior_mean_steps: Iterable[int] = (),
+        raw_latent_steps: Iterable[int] = (),
+        model_output_steps: Iterable[int] = (),
     ) -> GenerationOutput:
         """Run one T2V generation and additionally capture UniPC x0 predictions.
 
         This wraps the scheduler used by the original pipeline call instead of
         reimplementing the denoising loop, so the final sample stays on the same
         execution path as the baseline run.
+
+        `snapshot_steps` capture the post-step latent (z_{i+1}); `raw_latent_steps`
+        capture the pre-step latent (z_i, the interval anchor); `model_output_steps`
+        capture the raw guided model output (o_i) fed into `scheduler.step`;
+        `posterior_mean_steps` capture the scheduler's x0_hat. Indices are 0-based
+        over the `num_inference_steps` schedule.
         """
         self._load()
         pipe = self._pipe
         snapshot_set = set(snapshot_steps)
         posterior_set = set(posterior_mean_steps)
+        raw_latent_set = set(raw_latent_steps)
+        model_output_set = set(model_output_steps)
         captured: dict[int, torch.Tensor] = {}
         posterior_means: dict[int, torch.Tensor] = {}
+        raw_latents: dict[int, torch.Tensor] = {}
+        model_outputs: dict[int, torch.Tensor] = {}
+        scheduler_meta: dict = {}
         original_step = pipe.scheduler.step
         step_idx = 0
 
@@ -159,6 +196,7 @@ class Wan22Adapter:
             the posterior-mean computation."""
             nonlocal step_idx
             model_output = args[0] if args else kwargs["model_output"]
+            timestep = args[1] if len(args) >= 2 else kwargs.get("timestep")
             if len(args) >= 3:
                 sample = args[2]
             elif "sample" in kwargs:
@@ -166,8 +204,19 @@ class Wan22Adapter:
             else:
                 raise RuntimeError("scheduler.step called without a recognizable `sample` arg")
 
+            sched = pipe.scheduler
+            if step_idx == 0 and not scheduler_meta and self.scheduler_kind == "unipc":
+                scheduler_meta.update(_scheduler_meta(sched))
+            if step_idx in raw_latent_set:
+                raw_latents[step_idx] = self._capture_tensor(sample)
+            if step_idx in model_output_set:
+                model_outputs[step_idx] = self._capture_tensor(model_output)
             if step_idx in posterior_set:
-                posterior = _posterior_mean_from_step(pipe.scheduler, model_output, sample, step_idx)
+                # convert_model_output reads scheduler.step_index; ensure it is
+                # initialized (the pipeline's first step() would otherwise set it).
+                if sched.step_index is None:
+                    sched._init_step_index(timestep)
+                posterior = _posterior_mean_from_step(sched, model_output, sample, step_idx)
                 posterior_means[step_idx] = self._capture_tensor(posterior)
 
             result = original_step(*args, **kwargs)
@@ -201,6 +250,9 @@ class Wan22Adapter:
             frames=frames,
             latents_by_step=captured,
             posterior_means_by_step=posterior_means,
+            raw_latents_by_step=raw_latents,
+            model_outputs_by_step=model_outputs,
+            scheduler_meta=scheduler_meta,
         )
 
     def generate(

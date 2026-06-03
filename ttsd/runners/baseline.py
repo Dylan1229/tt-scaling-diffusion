@@ -172,6 +172,11 @@ def main(argv: list[str] | None = None) -> None:
         capture_posterior_means = bool(args.capture_posterior_means)
     posterior_mean_steps = snapshot_steps if capture_posterior_means else []
 
+    # Exp 0 / TT-FMD: also capture pre-step latents (z_i) and raw model outputs (o_i).
+    capture_raw_latents = bool(snap_cfg.get("capture_raw_latents", False))
+    raw_latent_steps = snapshot_steps if capture_raw_latents else []
+    model_output_steps = snapshot_steps if capture_raw_latents else []
+
     run_id = args.run_id or out_cfg.get("run_id") or dt.datetime.now().strftime("%Y%m%d_%H%M%S")
     run_root = Path(out_cfg["root"]) / run_id
     run_root.mkdir(parents=True, exist_ok=True)
@@ -199,9 +204,12 @@ def main(argv: list[str] | None = None) -> None:
         (out_dir / "latents").mkdir(exist_ok=True)
         if capture_posterior_means:
             (out_dir / "posterior_means").mkdir(exist_ok=True)
+        if capture_raw_latents:
+            (out_dir / "raw_latents").mkdir(exist_ok=True)
+            (out_dir / "model_outputs").mkdir(exist_ok=True)
 
         print(f"[baseline] ▶ {prompt['id']} seed={seed} :: {prompt['text'][:60]}…")
-        if capture_posterior_means:
+        if capture_posterior_means or capture_raw_latents:
             result = adapter.generate_with_posterior_means(
                 prompt=prompt["text"],
                 seed=seed,
@@ -212,6 +220,8 @@ def main(argv: list[str] | None = None) -> None:
                 guidance_scale=gen_cfg["guidance_scale"],
                 snapshot_steps=snapshot_steps,
                 posterior_mean_steps=posterior_mean_steps,
+                raw_latent_steps=raw_latent_steps,
+                model_output_steps=model_output_steps,
             )
         else:
             result = adapter.generate(
@@ -233,6 +243,15 @@ def main(argv: list[str] | None = None) -> None:
         if capture_posterior_means:
             for step_idx, posterior in result.posterior_means_by_step.items():
                 torch.save(posterior, out_dir / "posterior_means" / f"step_{step_idx:03d}.pt")
+        if capture_raw_latents:
+            for step_idx, raw in result.raw_latents_by_step.items():
+                torch.save(raw, out_dir / "raw_latents" / f"step_{step_idx:03d}.pt")
+            for step_idx, mo in result.model_outputs_by_step.items():
+                torch.save(mo, out_dir / "model_outputs" / f"step_{step_idx:03d}.pt")
+            if result.scheduler_meta:
+                (out_dir / "scheduler_meta.json").write_text(
+                    json.dumps(result.scheduler_meta, indent=2)
+                )
 
         meta = RunMeta(
             prompt_id=prompt["id"],
