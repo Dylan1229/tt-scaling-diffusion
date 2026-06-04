@@ -1,8 +1,8 @@
 """Build posterior-mean DINOv2 similarity heatmaps for one seed.
 
 Usage:
-    python -m ttsd.runners.posterior_mean_heatmap \
-        --posterior-mean-video-dir /path/to/decoded/posterior_means \
+    python -m ttsd.runners.features.cls_similarity \
+        --dino-input-frames-dir /path/to/dino_input_frames/seed_dir \
         --output-dir /path/to/seed_dir
 """
 
@@ -96,7 +96,7 @@ def _extract_features(
             return feature_tensor.numpy().reshape(frame_grid.shape[0], frame_grid.shape[1], -1), device
         except torch.OutOfMemoryError as exc:
             last_error = exc
-            print(f"[posterior_mean_heatmap] OOM on {device}; trying next device")
+            print(f"[cls_similarity] OOM on {device}; trying next device")
         finally:
             if model is not None:
                 del model
@@ -155,7 +155,7 @@ def _save_heatmap(
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--posterior-mean-video-dir", required=True, type=Path)
+    parser.add_argument("--dino-input-frames-dir", required=True, type=Path)
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--model-name", type=str, default=MODEL_NAME)
     parser.add_argument("--device", type=str, default="cuda")
@@ -163,7 +163,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--batch-size", type=int, default=32)
     args = parser.parse_args(argv)
 
-    video_files = _sorted_video_files(args.posterior_mean_video_dir)
+    video_files = _sorted_video_files(args.dino_input_frames_dir)
     frame_grid, step_labels = _load_frame_grid(video_files)
     candidate_devices = _candidate_devices(args.device, args.gpu_indices)
     feature_grid, used_device = _extract_features(
@@ -220,7 +220,7 @@ def main(argv: list[str] | None = None) -> None:
     )
 
     metadata = {
-        "posterior_mean_video_dir": str(args.posterior_mean_video_dir.resolve()),
+        "dino_input_frames_dir": str(args.dino_input_frames_dir.resolve()),
         "model_name": args.model_name,
         "used_device": used_device,
         "grid_shape": {

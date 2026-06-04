@@ -10,8 +10,8 @@ keep storage manageable; subsampled frame indices are stored alongside the
 tensor in the metadata JSON.
 
 Usage:
-    python -m ttsd.runners.posterior_mean_patch_features \
-        --posterior-mean-video-dir /path/to/seed_dir \
+    python -m ttsd.runners.features.patch_features \
+        --dino-input-frames-dir /path/to/dino_input_frames/seed_dir \
         --output-dir /path/to/seed_dir
 """
 
@@ -110,7 +110,7 @@ def _extract_patch_features(
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--posterior-mean-video-dir", required=True, type=Path)
+    parser.add_argument("--dino-input-frames-dir", required=True, type=Path)
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--model-name", type=str, default=MODEL_NAME)
     parser.add_argument("--device", type=str, default="cuda")
@@ -119,7 +119,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--frame-stride", type=int, default=4)
     args = parser.parse_args(argv)
 
-    video_files = _sorted_video_files(args.posterior_mean_video_dir)
+    video_files = _sorted_video_files(args.dino_input_frames_dir)
     grid, step_labels, frame_indices = _load_subsampled_frame_grid(video_files, args.frame_stride)
     devices = _candidate_devices(args.device, args.gpu_indices)
     feats, used_device = _extract_patch_features(grid, args.model_name, args.batch_size, devices)

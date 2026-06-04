@@ -51,6 +51,18 @@ DEFAULT_DIMENSIONS: list[str] = [
     "overall_consistency",
 ]
 
+# Dimensions scored on EVERY clip (prompt-agnostic): the model-quality metrics plus
+# overall video<->text consistency. To score a new metric on all videos, add it here
+# (it must NOT also be in `axis_bound` below).
+ALL_VIDEO_DIMENSIONS: tuple[str, ...] = (
+    "subject_consistency",
+    "background_consistency",
+    "motion_smoothness",
+    "aesthetic_quality",
+    "imaging_quality",
+    "overall_consistency",
+)
+
 
 def _slug(prompt: str) -> str:
     """VBench keys videos on the prompt-as-filename — keep the filename
@@ -223,7 +235,7 @@ def main(argv: list[str] | None = None) -> None:
                    help="Comma-separated VBench dimensions to score. Default: dimensions matching the prompt axes used in this run.")
     p.add_argument("--device", default="cuda")
     p.add_argument("--output", default=None, type=Path,
-                   help="Where to write VBench raw results + aggregated CSVs. Default: <run>/vbench/")
+                   help="Where to write VBench raw results + aggregated CSVs. Default: runs/vbench/<run_id>/")
     p.add_argument("--skip-staged", action="store_true",
                    help="Reuse existing staging dirs instead of re-symlinking.")
     args = p.parse_args(argv)
@@ -238,13 +250,14 @@ def main(argv: list[str] | None = None) -> None:
     else:
         axes_used = sorted({m["axis"] for m, _ in _iter_clips(run_dir) if m.get("axis")})
         dimensions = [d for d in DEFAULT_DIMENSIONS if d in axes_used]
-        # Always also score model-quality dimensions on every video.
-        for d in ("subject_consistency", "background_consistency", "motion_smoothness",
-                  "dynamic_degree", "aesthetic_quality", "imaging_quality"):
+        # Always also score the all-video dimensions on every clip.
+        for d in ALL_VIDEO_DIMENSIONS:
             if d not in dimensions:
                 dimensions.append(d)
 
-    out_root = args.output or (run_dir / "vbench")
+    # Default output is a top-level sibling of baseline/, keyed by run_id:
+    #   runs/baseline/<run_id>  ->  runs/vbench/<run_id>
+    out_root = args.output or (run_dir.parent.parent / "vbench" / run_dir.name)
     out_root.mkdir(parents=True, exist_ok=True)
     staging_root = out_root / "_staging"
     raw_root = out_root / "raw"
@@ -269,10 +282,10 @@ def main(argv: list[str] | None = None) -> None:
     else:
         per_axis_staging = {d: staging_root / d for d in dimensions if (staging_root / d).exists()}
 
-    # 2) Score each dimension. Axis-bound dims use per-axis staging; the
-    #    "model quality" dims use the _all dir.
+    # 2) Score each dimension. Axis-bound dims use per-axis staging (only their axis's
+    #    clips); ALL_VIDEO_DIMENSIONS use the _all dir (every clip).
     axis_bound = {"object_class", "multiple_objects", "human_action", "color",
-                  "spatial_relationship", "scene", "appearance_style", "overall_consistency"}
+                  "spatial_relationship", "scene", "appearance_style"}
 
     results_by_dim: dict[str, dict] = {}
     for dim in dimensions:

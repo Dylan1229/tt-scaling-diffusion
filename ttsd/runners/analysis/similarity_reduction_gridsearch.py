@@ -17,20 +17,19 @@ import argparse
 import csv
 import json
 import math
+import sys
 from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
 
-from ttsd.runners.posterior_mean_tail_rank import _iter_seed_dirs, _load_vbench_rows, _seed_idx_from_name
-
-SUBSCORES = [
-    "subject_consistency",
-    "background_consistency",
-    "motion_smoothness",
-    "aesthetic_quality",
-    "imaging_quality",
-]
+from ttsd.runners.utilities.run_layout import resolve_run_id, stage_output_dir
+from ttsd.runners.utilities.seed_vbench_loaders import (
+    SUBSCORES,
+    _iter_seed_dirs,
+    _load_vbench_rows,
+    _seed_idx_from_name,
+)
 
 VALID_DIRECTIONS = {"rows", "cols"}
 VALID_MATRIX_TYPES = {"diagonal", "frame_neighbor", "posterior_neighbor"}
@@ -399,22 +398,21 @@ def _write_markdown_summary(path: Path, rows: list[dict[str, object]]) -> None:
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--heatmap-run-root", required=True, type=Path)
-    parser.add_argument("--vbench-long-csv", required=True, type=Path)
+    parser.add_argument("--heatmap-run-root", type=Path, default=None)
+    parser.add_argument("--vbench-long-csv", type=Path, default=None)
     parser.add_argument("--output-dir", type=Path, default=None)
     parser.add_argument("--max-last-n", type=int, default=None)
     parser.add_argument("--tail-fractions", type=str, default=None)
     parser.add_argument("--direction", type=str, choices=sorted(VALID_DIRECTIONS), default="rows")
     parser.add_argument("--matrix-type", type=str, choices=sorted(VALID_MATRIX_TYPES), default="diagonal")
+    parser.add_argument("--run-id", type=str, default=None,
+                        help="Fill unset input roots from runs/<stage>/<run-id>.")
     args = parser.parse_args(argv)
+    resolve_run_id(args, parser, needs=["heatmap_run_root", "vbench_long_csv"])
 
     heatmap_run_root = args.heatmap_run_root.resolve()
-    if args.matrix_type == "diagonal":
-        default_output_name = "_lastn_tailk_grid_search" if args.direction == "rows" else "_coln_tailk_grid_search"
-    else:
-        suffix = "rows" if args.direction == "rows" else "cols"
-        default_output_name = f"_{args.matrix_type}_{suffix}_grid_search"
-    output_dir = (args.output_dir or (heatmap_run_root / default_output_name)).resolve()
+    variant = f"{args.matrix_type}_{args.direction}"
+    output_dir = (args.output_dir or stage_output_dir(heatmap_run_root, "analysis", __file__) / variant).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
     vbench_rows = _load_vbench_rows(args.vbench_long_csv.resolve())
@@ -459,7 +457,7 @@ def main(argv: list[str] | None = None) -> None:
     }
     metadata_path.write_text(json.dumps(metadata, indent=2))
 
-    print(json.dumps(metadata, indent=2))
+    print(json.dumps(metadata, indent=2), file=sys.stderr)
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 """Per-prompt good-vs-bad velocity-direction heatmaps in patch-mean space.
 
 For each prompt in sweep_v2, picks the best and worst seed by within-prompt
-`avg_vbench_z` (per-prompt z-normalized mean of the 5 VBench subscores), then
+`avg_vbench_z` (per-prompt z-normalized mean of the 6 VBench subscores), then
 produces a 2x2 figure:
 
     +------------------------------+------------------------------+
@@ -15,17 +15,15 @@ produces a 2x2 figure:
 where v_{s,k} is the L2-normalized patch-mean inter-frame velocity
 (patch features -> mean over P patches -> L2-normalize -> frame diff ->
 L2-normalize). Color scale is shared per-row (good/bad share vmin/vmax),
-matching the style of `runs/_report/fig_frame_heatmap_good_vs_bad.png`.
+matching the style of `runs/report/<run_id>/feature_property_figs/fig_frame_heatmap_good_vs_bad.png`.
 
-It also prints to stdout a raw per-cell dump of the four matrices
-(good-D, good-L, bad-D, bad-L) for every prompt; redirect stdout to a .txt.
+It also writes a raw per-cell dump of the four matrices (good-D, good-L, bad-D,
+bad-L) for every prompt to `velocity_heatmap_cells.txt` in the output dir.
 Per-prompt log lines go to stderr.
 
 Usage:
-    python -m ttsd.runners.posterior_mean_velocity_heatmaps \
-        --patch-run-root runs/posterior_mean_patch_features/<rid> \
-        --vbench-long-csv runs/vbench/<rid>/vbench_scores_long.csv \
-        --output-dir runs/_report/velocity_heatmaps_per_prompt
+    python -m ttsd.runners.report.velocity_heatmaps --run-id <run_id>
+    # → figures + velocity_heatmap_cells.txt in runs/report/<run_id>/velocity_heatmaps/
 """
 
 from __future__ import annotations
@@ -36,24 +34,20 @@ from collections import defaultdict
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-from ttsd.runners.posterior_mean_tail_rank import (
+from ttsd.runners.utilities.run_layout import resolve_run_id, stage_output_dir
+from ttsd.runners.utilities.seed_vbench_loaders import (
+    SUBSCORES,
     _iter_seed_dirs,
     _load_vbench_rows,
     _seed_idx_from_name,
 )
 
 PATCH_FILE = "posterior_mean_patch_features.npy"
-SUBSCORES = [
-    "subject_consistency",
-    "background_consistency",
-    "motion_smoothness",
-    "aesthetic_quality",
-    "imaging_quality",
-]
 
 
 def _patch_mean_velocity(F: np.ndarray) -> np.ndarray:
@@ -115,10 +109,14 @@ def _format_matrix(M: np.ndarray) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--patch-run-root", required=True, type=Path)
-    parser.add_argument("--vbench-long-csv", required=True, type=Path)
-    parser.add_argument("--output-dir", required=True, type=Path)
+    parser.add_argument("--patch-run-root", type=Path, default=None)
+    parser.add_argument("--vbench-long-csv", type=Path, default=None)
+    parser.add_argument("--output-dir", type=Path, default=None)
+    parser.add_argument("--run-id", type=str, default=None,
+                        help="Fill unset input roots from runs/<stage>/<run-id>.")
     args = parser.parse_args()
+    resolve_run_id(args, parser, needs=["patch_run_root", "vbench_long_csv"])
+    args.output_dir = args.output_dir or stage_output_dir(args.patch_run_root, "report", __file__)
 
     vbench = _load_vbench_rows(args.vbench_long_csv)
 
@@ -155,11 +153,12 @@ def main() -> None:
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"[velocity_heatmap_cells] {len(grouped)} prompts | good+bad seed each | "
-          f"D and L | shape 10 steps x 20 frame pairs")
-    print("[velocity_heatmap_cells] D[s,k] = <v_{s-1,k}, v_{s,k}>")
-    print("[velocity_heatmap_cells] L[s,k] = (1/s) sum_{r=0}^{s-1} <v_{r,k}, v_{s,k}>")
-    print()
+    cell_report: list[str] = []
+    cell_report.append(f"[velocity_heatmap_cells] {len(grouped)} prompts | good+bad seed each | "
+                       f"D and L | shape 10 steps x 20 frame pairs")
+    cell_report.append("[velocity_heatmap_cells] D[s,k] = <v_{s-1,k}, v_{s,k}>")
+    cell_report.append("[velocity_heatmap_cells] L[s,k] = (1/s) sum_{r=0}^{s-1} <v_{r,k}, v_{s,k}>")
+    cell_report.append("")
 
     for prompt_id in sorted(grouped.keys()):
         group = grouped[prompt_id]
@@ -191,21 +190,24 @@ def main() -> None:
         plt.close(fig)
 
         gi, bi = int(good["seed_idx"]), int(bad["seed_idx"])
-        print(f"==== prompt {prompt_id} ====")
-        print(f"good = seed{gi:04d} (avg_vbench_z = {good['avg_vbench_z']:+.4f})")
-        print(f"bad  = seed{bi:04d} (avg_vbench_z = {bad['avg_vbench_z']:+.4f})")
-        print()
+        cell_report.append(f"==== prompt {prompt_id} ====")
+        cell_report.append(f"good = seed{gi:04d} (avg_vbench_z = {good['avg_vbench_z']:+.4f})")
+        cell_report.append(f"bad  = seed{bi:04d} (avg_vbench_z = {bad['avg_vbench_z']:+.4f})")
+        cell_report.append("")
         for tag, M in [(f"good seed{gi:04d} | D step-adjacent", D_good),
                        (f"good seed{gi:04d} | L prefix-lock", L_good),
                        (f"bad seed{bi:04d} | D step-adjacent", D_bad),
                        (f"bad seed{bi:04d} | L prefix-lock", L_bad)]:
-            print(f"-- {tag} --")
-            print(_format_matrix(M))
-        print()
+            cell_report.append(f"-- {tag} --")
+            cell_report.append(_format_matrix(M))
+        cell_report.append("")
 
         print(f"[velocity_heatmaps] {prompt_id}: "
               f"good=seed{gi:04d} z={good['avg_vbench_z']:+.2f}  "
               f"bad=seed{bi:04d} z={bad['avg_vbench_z']:+.2f}", file=sys.stderr)
+
+    (args.output_dir / "velocity_heatmap_cells.txt").write_text("\n".join(cell_report) + "\n")
+    print("Wrote", args.output_dir / "velocity_heatmap_cells.txt", file=sys.stderr)
 
 
 if __name__ == "__main__":

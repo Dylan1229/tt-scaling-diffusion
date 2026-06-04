@@ -5,8 +5,8 @@ posterior-mean transition rows, flatten them, take the lowest q fraction of
 values, and average them. Higher is better.
 
 Usage:
-    python -m ttsd.runners.posterior_mean_tail_rank \
-        --heatmap-run-root /path/to/replay_run_root \
+    python -m ttsd.runners.analysis.similarity_tail_ranking \
+        --heatmap-run-root /path/to/cls_features/<run_id> \
         --vbench-long-csv /path/to/vbench_scores_long.csv
 """
 
@@ -16,37 +16,14 @@ import argparse
 import csv
 import json
 import math
+import sys
 from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
 
-
-def _load_vbench_rows(vbench_long_csv: Path) -> dict[tuple[str, int], dict[str, object]]:
-    rows_by_seed: dict[tuple[str, int], dict[str, object]] = {}
-
-    with vbench_long_csv.open(newline="") as handle:
-        reader = csv.DictReader(handle)
-        for row in reader:
-            prompt_id = row["prompt_id"]
-            prompt_text = row["prompt_text"]
-            axis = row["axis"]
-            seed_idx = int(row["seed_idx"])
-            dimension = row["dimension"]
-            score = float(row["score"])
-            key = (prompt_id, seed_idx)
-
-            if key not in rows_by_seed:
-                rows_by_seed[key] = {
-                    "prompt_id": prompt_id,
-                    "prompt_text": prompt_text,
-                    "axis": axis,
-                    "seed_idx": seed_idx,
-                }
-
-            rows_by_seed[key][dimension] = score
-
-    return rows_by_seed
+from ttsd.runners.utilities.run_layout import resolve_run_id, stage_output_dir
+from ttsd.runners.utilities.seed_vbench_loaders import _iter_seed_dirs, _load_vbench_rows, _seed_idx_from_name
 
 
 def _tail_mean(values: np.ndarray, tail_fraction: float) -> float:
@@ -78,14 +55,6 @@ def _score_value(heatmap: np.ndarray, score_type: str, tail_fraction: float, lat
     if score_type == "global_mean":
         return float(heatmap.mean())
     raise ValueError(f"Unsupported score type: {score_type}")
-
-
-def _iter_seed_dirs(heatmap_run_root: Path) -> list[Path]:
-    return sorted(path for path in heatmap_run_root.glob("p*/seed*") if path.is_dir())
-
-
-def _seed_idx_from_name(seed_dir: Path) -> int:
-    return int(seed_dir.name.replace("seed", ""))
 
 
 def _metric_row_for_seed(
@@ -161,8 +130,8 @@ def _write_csv(path: Path, rows: list[dict[str, object]], fieldnames: list[str])
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--heatmap-run-root", required=True, type=Path)
-    parser.add_argument("--vbench-long-csv", required=True, type=Path)
+    parser.add_argument("--heatmap-run-root", type=Path, default=None)
+    parser.add_argument("--vbench-long-csv", type=Path, default=None)
     parser.add_argument("--output-dir", type=Path, default=None)
     parser.add_argument(
         "--score-type",
@@ -171,7 +140,10 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument("--tail-fraction", type=float, default=0.2)
     parser.add_argument("--late-rows", type=int, default=2)
+    parser.add_argument("--run-id", type=str, default=None,
+                        help="Fill unset input roots from runs/<stage>/<run-id>.")
     args = parser.parse_args(argv)
+    resolve_run_id(args, parser, needs=["heatmap_run_root", "vbench_long_csv"])
 
     if not (0.0 < args.tail_fraction <= 1.0):
         raise ValueError("--tail-fraction must be in (0, 1]")
@@ -180,7 +152,7 @@ def main(argv: list[str] | None = None) -> None:
 
     heatmap_run_root = args.heatmap_run_root.resolve()
     output_stem = _metric_output_stem(args.score_type, args.tail_fraction, args.late_rows)
-    output_dir = (args.output_dir or (heatmap_run_root / f"_{output_stem}_rankings")).resolve()
+    output_dir = (args.output_dir or stage_output_dir(heatmap_run_root, "analysis", __file__)).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
     vbench_rows = _load_vbench_rows(args.vbench_long_csv.resolve())
@@ -255,7 +227,7 @@ def main(argv: list[str] | None = None) -> None:
     }
     metadata_json.write_text(json.dumps(metadata, indent=2))
 
-    print(json.dumps(metadata, indent=2))
+    print(json.dumps(metadata, indent=2), file=sys.stderr)
 
 
 if __name__ == "__main__":

@@ -7,9 +7,12 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 usage() {
   cat <<'EOF'
 Usage:
-  scripts/run_posterior_mean_heatmap_batch.sh \
-    --decoded-run-root /path/to/decoded/posterior_mean/root \
-    --output-run-root /path/to/output/root
+  scripts/extract_cls_similarity_batch.sh --run-id <run_id>
+      # → decoded runs/dino_input_frames/<run_id>, output runs/cls_features/<run_id>
+  # explicit roots override the --run-id defaults:
+  scripts/extract_cls_similarity_batch.sh \
+    --decoded-run-root runs/dino_input_frames/<run_id> \
+    --output-run-root runs/cls_features/<run_id>
 
 Optional:
   --gpu-indices 4,5,6,7
@@ -24,6 +27,7 @@ EOF
 
 DECODED_RUN_ROOT=""
 OUTPUT_RUN_ROOT=""
+RUN_ID=""
 GPU_INDICES="4,5,6,7"
 BATCH_SIZE=32
 LIMIT=""
@@ -37,6 +41,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --output-run-root)
       OUTPUT_RUN_ROOT="$2"
+      shift 2
+      ;;
+    --run-id)
+      RUN_ID="$2"
       shift 2
       ;;
     --gpu-indices)
@@ -66,6 +74,11 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+if [[ -n "$RUN_ID" ]]; then
+  : "${DECODED_RUN_ROOT:=runs/dino_input_frames/$RUN_ID}"
+  : "${OUTPUT_RUN_ROOT:=runs/cls_features/$RUN_ID}"
+fi
 
 if [[ -z "$DECODED_RUN_ROOT" || -z "$OUTPUT_RUN_ROOT" ]]; then
   usage >&2
@@ -132,8 +145,8 @@ run_worker() {
     mkdir -p "$output_dir"
     echo "[posterior_heatmap_batch gpu${gpu_index}] heatmap $rel_path"
     if ! env PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
-      .venv/bin/python -m ttsd.runners.posterior_mean_heatmap \
-        --posterior-mean-video-dir "$seed_dir" \
+      .venv/bin/python -m ttsd.runners.features.cls_similarity \
+        --dino-input-frames-dir "$seed_dir" \
         --output-dir "$output_dir" \
         --gpu-indices "$gpu_index" \
         --batch-size "$BATCH_SIZE"; then

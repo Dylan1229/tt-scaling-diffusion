@@ -9,14 +9,14 @@
 #   - skips clips that already have a DONE marker (so re-launching is safe)
 #
 # Usage:
-#   ./scripts/launch_sweep_v2_4gpu.sh                 # defaults: GPUs 4,5,6,7
-#   GPUS=2,3,4,5 ./scripts/launch_sweep_v2_4gpu.sh    # override GPU set
-#   RUN_ID=test_v2 ./scripts/launch_sweep_v2_4gpu.sh  # override run-id
+#   ./scripts/generate_sweep_v2_4gpu.sh                 # defaults: GPUs 4,5,6,7
+#   GPUS=2,3,4,5 ./scripts/generate_sweep_v2_4gpu.sh    # override GPU set
+#   RUN_ID=test_v2 ./scripts/generate_sweep_v2_4gpu.sh  # override run-id
 #
 # After launch:
 #   tmux ls                       # confirm 4 sessions live
 #   tmux attach -t sweep_v2_gpu4  # detach with Ctrl-b d
-#   tail -f runs/_logs/sweep_v2_<run_id>_gpu*.log
+#   tail -f runs/logs/sweep_v2_<run_id>_gpu*.log
 #   find runs/baseline/<run_id> -name DONE | wc -l   # progress (max 450)
 #   tmux kill-session -t sweep_v2_gpu4  # cancel one shard
 
@@ -31,8 +31,8 @@ NUM_SHARDS="${#GPU_ARR[@]}"
 
 RUN_ID="${RUN_ID:-sweep_v2_$(date +%Y%m%d_%H%M%S)}"
 CONFIG="${CONFIG:-configs/sweep_v2_wan22_480p.yaml}"
-VENV="${VENV:-/data/datasets/fanjiang/venv_envs/tt-scaling-diffusion}"
-LOG_DIR="$REPO_ROOT/runs/_logs"
+VENV="${VENV:-$REPO_ROOT/.venv}"
+LOG_DIR="$REPO_ROOT/runs/logs"
 mkdir -p "$LOG_DIR"
 
 echo "[launch] run_id  = $RUN_ID"
@@ -54,7 +54,7 @@ for i in "${!GPU_ARR[@]}"; do
   fi
 
   CMD="cd '$REPO_ROOT' && source '$VENV/bin/activate' && \
-CUDA_VISIBLE_DEVICES=$GPU python -u -m ttsd.runners.baseline \
+CUDA_VISIBLE_DEVICES=$GPU python -u -m ttsd.runners.generate.baseline \
   --config '$CONFIG' \
   --capture-posterior-means \
   --run-id '$RUN_ID' \

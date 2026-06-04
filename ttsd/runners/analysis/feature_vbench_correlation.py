@@ -1,8 +1,9 @@
-"""Single-scalar patch-level SSL properties for each seed.
+"""Single-scalar DINOv2 feature diagnostics (patch + CLS) for each seed.
 
 Given per-seed patch features in shape (T, N_sub, P, D), compute a small
 collection of conceptually-clean single-number properties and report
-within-prompt Spearman / winner-match against avg_vbench_z.
+within-prompt Spearman / winner-match against avg_vbench_z and each individual
+VBench subscore.
 
 Properties probed (each one is a single scalar):
   - PATCH-MEAN-COS   : mean cos(patch_mean[k], patch_mean[k+1]) over (i, k)
@@ -24,13 +25,16 @@ Properties probed (each one is a single scalar):
 from __future__ import annotations
 
 import argparse
+import sys
 from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
 
-from ttsd.runners.posterior_mean_ridge_feature_model import _rankdata
-from ttsd.runners.posterior_mean_tail_rank import (
+from ttsd.runners.utilities.ranking import _rankdata
+from ttsd.runners.utilities.run_layout import resolve_run_id, stage_output_dir
+from ttsd.runners.utilities.seed_vbench_loaders import (
+    SUBSCORES,
     _iter_seed_dirs,
     _load_vbench_rows,
     _seed_idx_from_name,
@@ -38,13 +42,17 @@ from ttsd.runners.posterior_mean_tail_rank import (
 
 PATCH_FILE = "posterior_mean_patch_features.npy"
 CLS_FILE = "posterior_mean_features.npy"
-SUBSCORES = [
-    "subject_consistency",
-    "background_consistency",
-    "motion_smoothness",
-    "aesthetic_quality",
-    "imaging_quality",
-]
+
+# Compact column headers for the per-target report table (avg_vbench_z + the 6 subscores).
+SHORT_LABEL = {
+    "avg_vbench_z": "avgZ",
+    "subject_consistency": "subj",
+    "background_consistency": "bg",
+    "motion_smoothness": "motion",
+    "aesthetic_quality": "aesth",
+    "imaging_quality": "imag",
+    "overall_consistency": "overall",
+}
 
 
 def _within(score: np.ndarray, y: np.ndarray, prompt_to_idx: dict[str, list[int]]) -> float:
@@ -263,10 +271,15 @@ def _cls_metrics(F_cls: np.ndarray) -> dict[str, float]:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--patch-run-root", required=True, type=Path)
-    parser.add_argument("--cls-run-root", required=True, type=Path)
-    parser.add_argument("--vbench-long-csv", required=True, type=Path)
+    parser.add_argument("--patch-run-root", type=Path, default=None)
+    parser.add_argument("--cls-run-root", type=Path, default=None)
+    parser.add_argument("--vbench-long-csv", type=Path, default=None)
+    parser.add_argument("--output-dir", type=Path, default=None)
+    parser.add_argument("--run-id", type=str, default=None,
+                        help="Fill unset input roots from runs/<stage>/<run-id>.")
     args = parser.parse_args()
+    resolve_run_id(args, parser, needs=["patch_run_root", "cls_run_root", "vbench_long_csv"])
+    args.output_dir = args.output_dir or stage_output_dir(args.cls_run_root, "analysis", __file__)
 
     vbench = _load_vbench_rows(args.vbench_long_csv)
 
@@ -292,7 +305,7 @@ def main() -> None:
             del F_cls
         records.append(rec)
         del F
-    print(f"[patch_analysis] loaded {len(records)} seeds")
+    print(f"[feature_vbench_correlation] loaded {len(records)} seeds", file=sys.stderr)
 
     # Build avg_vbench_z (per-prompt z-normalize then average subscores)
     grouped = defaultdict(list)
@@ -308,25 +321,58 @@ def main() -> None:
         for g in group:
             g["avg_vbench_z"] = float(np.mean([g[f"z_{m}"] for m in SUBSCORES]))
 
-    y = np.array([r["avg_vbench_z"] for r in records])
     prompt_to_idx: dict[str, list[int]] = defaultdict(list)
     for i, r in enumerate(records):
         prompt_to_idx[r["prompt_id"]].append(i)
-
     n_prompts = len(prompt_to_idx)
+
+    # Align each metric against avg_vbench_z AND every individual subscore. Within-prompt
+    # Spearman is rank-based, so the raw subscore gives the same value as its z-normalized
+    # version; only avg_vbench_z needs the z-norm computed above.
+    targets = ["avg_vbench_z"] + SUBSCORES
+    target_arr = {t: np.array([float(r[t]) for r in records]) for t in targets}
+
     metric_keys = [k for k in records[0].keys() if k.startswith(("patch_", "finalpost_"))]
-    rows = []
+
+    def stats_for(metric_signed, arrs, pti):
+        return {t: (_within(metric_signed, arrs[t], pti), _winner_match(metric_signed, arrs[t], pti))
+                for t in targets}
+
+    rows = []  # each: (metric, sign, {target: (sp_within, winner_match)})
     for k in metric_keys:
         s = np.array([r[k] for r in records], float)
         for sign in (1, -1):
-            ss = sign * s
-            rows.append((k, sign, _within(ss, y, prompt_to_idx), _winner_match(ss, y, prompt_to_idx)))
-    rows.sort(key=lambda r: -abs(r[2]))
-    wm_w = len(str(n_prompts)) * 2 + 1
-    print(f"{'metric':<48} {'sign':>4} {'sp_within':>10} {'WM':>{wm_w}}")
-    print("-" * (66 + wm_w))
-    for k, sign, sp, wm in rows:
-        print(f"{k:<48} {sign:>4} {sp:>10.4f} {wm:>{wm_w - len(str(n_prompts)) - 1}}/{n_prompts}")
+            rows.append((k, sign, stats_for(sign * s, target_arr, prompt_to_idx)))
+    rows.sort(key=lambda r: -abs(r[2]["avg_vbench_z"][0]))
+
+    def render_table(table_rows, n):
+        header = (f"{'metric':<44} {'sgn':>3} "
+                  + " ".join(f"{SHORT_LABEL[t]:>9}" for t in targets)
+                  + f"  {'WM_avgZ':>8}")
+        lines = [header, "-" * len(header)]
+        for k, sign, st in table_rows:
+            sps = " ".join(f"{st[t][0]:>+9.4f}" for t in targets)
+            wm = st["avg_vbench_z"][1]
+            lines.append(f"{k:<44} {sign:>3} {sps}  {f'{wm}/{n}':>8}")
+        return lines
+
+    report: list[str] = []
+    report.append("within-prompt Spearman of each metric vs each target "
+                  "(avgZ = avg_vbench_z; columns are signed; WM_avgZ = winner-match vs avg_vbench_z)")
+    report.extend(render_table(rows, n_prompts))
+
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    with (args.output_dir / "correlation_table.csv").open("w", newline="") as h:
+        cols = ["metric", "sign", "n_prompts"]
+        for t in targets:
+            cols += [f"sp_{t}", f"wm_{t}"]
+        h.write(",".join(cols) + "\n")
+        for k, sign, st in rows:
+            vals = [k, str(sign), str(n_prompts)]
+            for t in targets:
+                sp, wm = st[t]
+                vals += [f"{sp:.6f}", str(wm)]
+            h.write(",".join(vals) + "\n")
 
     sizes = sorted({len(ps) for ps in prompt_to_idx.values()})
     if len(sizes) > 1:
@@ -337,24 +383,17 @@ def main() -> None:
             for i, r in enumerate(bucket_recs):
                 pti_sub[r["prompt_id"]].append(i)
             n_sub = len(pti_sub)
-            y_sub = np.array([r["avg_vbench_z"] for r in bucket_recs])
-            bucket_stats: dict[tuple[str, int], tuple[float, int]] = {}
-            for k in metric_keys:
-                s_sub = np.array([r[k] for r in bucket_recs], float)
-                for sign in (1, -1):
-                    ss = sign * s_sub
-                    bucket_stats[(k, sign)] = (
-                        _within(ss, y_sub, pti_sub),
-                        _winner_match(ss, y_sub, pti_sub),
-                    )
-            wm_w_b = len(str(n_sub)) * 2 + 1
-            print()
-            print(f"--- bucket n={sz} ({n_sub} prompts) ---")
-            print(f"{'metric':<48} {'sign':>4} {'sp_within':>10} {'WM':>{wm_w_b}}")
-            print("-" * (66 + wm_w_b))
-            for k, sign in pooled_order:
-                sp, wm = bucket_stats[(k, sign)]
-                print(f"{k:<48} {sign:>4} {sp:>10.4f} {wm:>{wm_w_b - len(str(n_sub)) - 1}}/{n_sub}")
+            arr_sub = {t: np.array([float(r[t]) for r in bucket_recs]) for t in targets}
+            metric_sub = {k: np.array([r[k] for r in bucket_recs], float) for k in metric_keys}
+            bucket_rows = [(k, sign, stats_for(sign * metric_sub[k], arr_sub, pti_sub))
+                           for k, sign in pooled_order]
+            report.append("")
+            report.append(f"--- bucket n={sz} ({n_sub} prompts) ---")
+            report.extend(render_table(bucket_rows, n_sub))
+
+    (args.output_dir / "correlation_report.txt").write_text("\n".join(report) + "\n")
+    print("Wrote", args.output_dir / "correlation_table.csv", file=sys.stderr)
+    print("Wrote", args.output_dir / "correlation_report.txt", file=sys.stderr)
 
 
 if __name__ == "__main__":

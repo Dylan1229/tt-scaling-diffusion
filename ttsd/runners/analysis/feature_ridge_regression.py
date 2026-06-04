@@ -16,20 +16,21 @@ from __future__ import annotations
 import argparse
 import csv
 import math
+import sys
 from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
 
-from ttsd.runners.posterior_mean_tail_rank import _iter_seed_dirs, _load_vbench_rows, _seed_idx_from_name
+from ttsd.runners.utilities.ranking import _rankdata
+from ttsd.runners.utilities.run_layout import resolve_run_id, stage_output_dir
+from ttsd.runners.utilities.seed_vbench_loaders import (
+    SUBSCORES,
+    _iter_seed_dirs,
+    _load_vbench_rows,
+    _seed_idx_from_name,
+)
 
-SUBSCORES = [
-    "subject_consistency",
-    "background_consistency",
-    "motion_smoothness",
-    "aesthetic_quality",
-    "imaging_quality",
-]
 FRAME_FILE = "posterior_mean_frame_neighbor_similarity.npy"
 POST_FILE = "posterior_mean_posterior_neighbor_similarity.npy"
 FEATURES_FILE = "posterior_mean_features.npy"
@@ -200,21 +201,6 @@ def _finalpost_features(F_patch: np.ndarray | None,
                       float(np.trapz(cos_curve) / (Tc - 2 + 1e-12))))
 
     return feats
-
-
-def _rankdata(values: np.ndarray) -> np.ndarray:
-    order = np.argsort(values)
-    ranks = np.empty(len(values), dtype=float)
-    i = 0
-    while i < len(values):
-        j = i
-        while j + 1 < len(values) and values[order[j + 1]] == values[order[i]]:
-            j += 1
-        rank = (i + j) / 2.0 + 1.0
-        for k in range(i, j + 1):
-            ranks[order[k]] = rank
-        i = j + 1
-    return ranks
 
 
 def _tail_mean(values: np.ndarray, tail_fraction: float) -> float:
@@ -520,25 +506,28 @@ def _run_loocv(seed_records: list[dict[str, object]], alpha: float,
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--heatmap-run-root", type=Path, required=True)
+    parser.add_argument("--heatmap-run-root", type=Path, default=None)
     parser.add_argument("--patch-run-root", type=Path, default=None,
                         help="Optional root with posterior_mean_patch_features.npy per seed.")
-    parser.add_argument("--vbench-long-csv", type=Path, required=True)
+    parser.add_argument("--vbench-long-csv", type=Path, default=None)
     parser.add_argument("--output-dir", type=Path, default=None)
     parser.add_argument("--alphas", type=str, default="0.03,0.1,0.3,1,3,10,30,100")
     parser.add_argument("--targets", type=str,
                         default="avg_vbench_z,subject_consistency")
+    parser.add_argument("--run-id", type=str, default=None,
+                        help="Fill unset input roots from runs/<stage>/<run-id>.")
     args = parser.parse_args()
+    resolve_run_id(args, parser, needs=["heatmap_run_root", "vbench_long_csv"])
 
-    output_dir = args.output_dir or (args.heatmap_run_root / "_ridge_feature_model")
+    output_dir = args.output_dir or stage_output_dir(args.heatmap_run_root, "analysis", __file__)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     vbench_rows = _load_vbench_rows(args.vbench_long_csv)
     seed_records = _load_seed_records(args.heatmap_run_root, vbench_rows,
                                       patch_run_root=args.patch_run_root)
-    print(f"Loaded {len(seed_records)} seeds, {len({r['prompt_id'] for r in seed_records})} prompts", flush=True)
+    print(f"Loaded {len(seed_records)} seeds, {len({r['prompt_id'] for r in seed_records})} prompts", flush=True, file=sys.stderr)
     feature_names = seed_records[0]["feature_names"]
-    print(f"Feature dim: {len(feature_names)}", flush=True)
+    print(f"Feature dim: {len(feature_names)}", flush=True, file=sys.stderr)
 
     alphas = [float(x) for x in args.alphas.split(",")]
     targets = [t.strip() for t in args.targets.split(",")]
@@ -564,10 +553,10 @@ def main() -> None:
                 np_ = summary.get("n_prompts", "?")
                 if sp > best["sp"]:
                     best["sp"] = sp; best["row"] = summary
-                    print(f"[NEW BEST Spearman] {tag:<55} sp={sp:.4f}  winner={wm}/{np_}  top5={ov:.4f}", flush=True)
+                    print(f"[NEW BEST Spearman] {tag:<55} sp={sp:.4f}  winner={wm}/{np_}  top5={ov:.4f}", flush=True, file=sys.stderr)
                 if wm > best["wm"] or (wm == best["wm"] and sp > best["wm_tb"]):
                     best["wm"] = wm; best["wm_tb"] = sp; best["wm_row"] = summary
-                    print(f"[NEW BEST Winner ] {tag:<55} winner={wm}/{np_}  sp={sp:.4f}  top5={ov:.4f}", flush=True)
+                    print(f"[NEW BEST Winner ] {tag:<55} winner={wm}/{np_}  sp={sp:.4f}  top5={ov:.4f}", flush=True, file=sys.stderr)
 
     # Sweep 2: small per-target feature subsets to reduce overfitting
     # use ranking of features by abs correlation with training target on full data first (lazy: just
@@ -752,10 +741,10 @@ def main() -> None:
                     np_ = summary.get("n_prompts", "?")
                     if sp > best["sp"]:
                         best["sp"] = sp; best["row"] = summary
-                        print(f"[NEW BEST Spearman] {tag:<55} sp={sp:.4f}  winner={wm}/{np_}  top5={ov:.4f}", flush=True)
+                        print(f"[NEW BEST Spearman] {tag:<55} sp={sp:.4f}  winner={wm}/{np_}  top5={ov:.4f}", flush=True, file=sys.stderr)
                     if wm > best["wm"] or (wm == best["wm"] and sp > best["wm_tb"]):
                         best["wm"] = wm; best["wm_tb"] = sp; best["wm_row"] = summary
-                        print(f"[NEW BEST Winner ] {tag:<55} winner={wm}/{np_}  sp={sp:.4f}  top5={ov:.4f}", flush=True)
+                        print(f"[NEW BEST Winner ] {tag:<55} winner={wm}/{np_}  sp={sp:.4f}  top5={ov:.4f}", flush=True, file=sys.stderr)
 
     fieldnames = list(rows[0].keys())
     with (output_dir / "ridge_feature_results.csv").open("w", newline="") as h:
@@ -812,8 +801,8 @@ def main() -> None:
             f"{r['subject_consistency_prompt_mean_spearman']:.4f} |"
         )
     (output_dir / "ridge_feature_summary.md").write_text("\n".join(md_lines))
-    print("Wrote", output_dir / "ridge_feature_results.csv")
-    print("Wrote", output_dir / "ridge_feature_summary.md")
+    print("Wrote", output_dir / "ridge_feature_results.csv", file=sys.stderr)
+    print("Wrote", output_dir / "ridge_feature_summary.md", file=sys.stderr)
 
 
 if __name__ == "__main__":
