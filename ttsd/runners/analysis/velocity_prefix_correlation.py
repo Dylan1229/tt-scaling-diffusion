@@ -10,41 +10,38 @@ for every (s_0, s) with 0 <= s_0 < s <= T - 1. T = 11 posterior steps, so the
 grid has C(11, 2) = 55 entries, named `L_s0_{s0:02d}_s_{s:02d}`.
 
 At (s_0 = 0, s = T - 1) the statistic equals the existing
-`finalpost_velcos_pm_mean` (see `posterior_mean_patch_analysis._patch_metrics`):
+`finalpost_velcos_pm_mean` (see `feature_vbench_correlation._patch_metrics`):
 this is the sanity row used to validate the implementation against
-`runs/_exp1_patch_analysis_sweep_v2_20260521_000253.txt`.
+`runs/analysis/<run_id>/feature_vbench_correlation/correlation_report.txt`.
 
-The stdout report mimics `posterior_mean_patch_analysis.py` row-for-row
-(pooled table sorted by |sp_within|, then per-bucket sub-tables in pooled
-order). Figures land in --output-dir.
+The text report mimics `feature_vbench_correlation.py` row-for-row (pooled table
+sorted by |sp_within|, then per-bucket sub-tables in pooled order) and is written
+to `ranking_report.txt` in the output dir. Figures land in the output dir too.
 """
 
 from __future__ import annotations
 
 import argparse
+import sys
 from collections import defaultdict
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-from ttsd.runners.posterior_mean_ridge_feature_model import _rankdata
-from ttsd.runners.posterior_mean_tail_rank import (
+from ttsd.runners.utilities.ranking import _rankdata
+from ttsd.runners.utilities.run_layout import resolve_run_id, stage_output_dir
+from ttsd.runners.utilities.seed_vbench_loaders import (
+    SUBSCORES,
     _iter_seed_dirs,
     _load_vbench_rows,
     _seed_idx_from_name,
 )
 
 PATCH_FILE = "posterior_mean_patch_features.npy"
-SUBSCORES = [
-    "subject_consistency",
-    "background_consistency",
-    "motion_smoothness",
-    "aesthetic_quality",
-    "imaging_quality",
-]
 
 
 def _within(score: np.ndarray, y: np.ndarray, prompt_to_idx: dict[str, list[int]]) -> float:
@@ -93,10 +90,14 @@ def _prefix_locking_scalars(F: np.ndarray) -> dict[str, float]:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--patch-run-root", required=True, type=Path)
-    parser.add_argument("--vbench-long-csv", required=True, type=Path)
-    parser.add_argument("--output-dir", required=True, type=Path)
+    parser.add_argument("--patch-run-root", type=Path, default=None)
+    parser.add_argument("--vbench-long-csv", type=Path, default=None)
+    parser.add_argument("--output-dir", type=Path, default=None)
+    parser.add_argument("--run-id", type=str, default=None,
+                        help="Fill unset input roots from runs/<stage>/<run-id>.")
     args = parser.parse_args()
+    resolve_run_id(args, parser, needs=["patch_run_root", "vbench_long_csv"])
+    args.output_dir = args.output_dir or stage_output_dir(args.patch_run_root, "analysis", __file__)
 
     vbench = _load_vbench_rows(args.vbench_long_csv)
 
@@ -117,9 +118,9 @@ def main() -> None:
         rec.update(scalars)
         records.append(rec)
         del F
-    print(f"[prefix_locking] loaded {len(records)} seeds")
+    print(f"[velocity_prefix_correlation] loaded {len(records)} seeds", file=sys.stderr)
 
-    # Per-prompt z-normalize the 5 subscores -> avg_vbench_z
+    # Per-prompt z-normalize the 6 subscores -> avg_vbench_z
     grouped: dict[str, list[dict[str, object]]] = defaultdict(list)
     for r in records:
         grouped[str(r["prompt_id"])].append(r)
@@ -147,11 +148,13 @@ def main() -> None:
             ss = sign * s
             rows.append((k, sign, _within(ss, y, prompt_to_idx), _winner_match(ss, y, prompt_to_idx)))
     rows.sort(key=lambda r: -abs(r[2]))
+
+    report: list[str] = []
     wm_w = len(str(n_prompts)) * 2 + 1
-    print(f"{'metric':<48} {'sign':>4} {'sp_within':>10} {'WM':>{wm_w}}")
-    print("-" * (66 + wm_w))
+    report.append(f"{'metric':<48} {'sign':>4} {'sp_within':>10} {'WM':>{wm_w}}")
+    report.append("-" * (66 + wm_w))
     for k, sign, sp, wm in rows:
-        print(f"{k:<48} {sign:>4} {sp:>10.4f} {wm:>{wm_w - len(str(n_prompts)) - 1}}/{n_prompts}")
+        report.append(f"{k:<48} {sign:>4} {sp:>10.4f} {wm:>{wm_w - len(str(n_prompts)) - 1}}/{n_prompts}")
 
     # Bucket alignment stats (sign = +1) keyed by bucket label, then by (s0, s)
     bucket_sp: dict[str, dict[tuple[int, int], float]] = {"pooled": {}}
@@ -181,13 +184,13 @@ def main() -> None:
                         _winner_match(ss_arr, y_sub, pti_sub),
                     )
             wm_w_b = len(str(n_sub)) * 2 + 1
-            print()
-            print(f"--- bucket n={sz} ({n_sub} prompts) ---")
-            print(f"{'metric':<48} {'sign':>4} {'sp_within':>10} {'WM':>{wm_w_b}}")
-            print("-" * (66 + wm_w_b))
+            report.append("")
+            report.append(f"--- bucket n={sz} ({n_sub} prompts) ---")
+            report.append(f"{'metric':<48} {'sign':>4} {'sp_within':>10} {'WM':>{wm_w_b}}")
+            report.append("-" * (66 + wm_w_b))
             for k, sign in pooled_order:
                 sp, wm = bucket_stats[(k, sign)]
-                print(f"{k:<48} {sign:>4} {sp:>10.4f} {wm:>{wm_w_b - len(str(n_sub)) - 1}}/{n_sub}")
+                report.append(f"{k:<48} {sign:>4} {sp:>10.4f} {wm:>{wm_w_b - len(str(n_sub)) - 1}}/{n_sub}")
 
             label = f"n{sz}"
             bucket_sp[label] = {}
@@ -196,6 +199,10 @@ def main() -> None:
                     parts = k[0].split("_")
                     s0, ss = int(parts[2]), int(parts[4])
                     bucket_sp[label][(s0, ss)] = sp
+
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    (args.output_dir / "ranking_report.txt").write_text("\n".join(report) + "\n")
+    print("Wrote", args.output_dir / "ranking_report.txt", file=sys.stderr)
 
     # Figures: one subfolder per bucket, 10 per-s0 plots + 1 overlay each
     T = max(int(k.split("_s_")[1]) for k in metric_keys) + 1

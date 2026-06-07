@@ -1,7 +1,7 @@
-"""Decode saved Wan latent snapshots into reference videos.
+"""Decode saved Wan latent snapshots into per-step mp4 clips.
 
 Usage:
-    python -m ttsd.runners.decode_latents \
+    python -m ttsd.runners.generate.decode_latents \
         --latents-dir /path/to/latents \
         --output-dir /path/to/output
 """
@@ -16,7 +16,7 @@ import torch
 from diffusers import AutoencoderKLWan
 from diffusers.video_processor import VideoProcessor
 
-from ttsd.runners.baseline import _save_video
+from ttsd.runners.generate.baseline import _save_video
 
 DEFAULT_MODEL_PATH = (
     "/data/datasets/fanjiang/.cache/huggingface/hub/"

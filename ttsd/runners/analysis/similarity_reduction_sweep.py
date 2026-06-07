@@ -3,7 +3,7 @@
 Each reduction produces ONE scalar score per seed from one or both clean
 matrices (`frame_neighbor`, `posterior_neighbor`). We then align each
 reduction's per-seed scores with VBench, identical to
-``posterior_mean_metric_grid_search``.
+``similarity_reduction_gridsearch``.
 
 Reductions sweepable here:
 - col_min_tail:   per-column min over last_n posterior rows, tail-mean over cols
@@ -23,21 +23,20 @@ from __future__ import annotations
 import argparse
 import csv
 import math
+import sys
 from collections import defaultdict
 from pathlib import Path
 from typing import Callable
 
 import numpy as np
 
-from ttsd.runners.posterior_mean_tail_rank import _iter_seed_dirs, _load_vbench_rows, _seed_idx_from_name
-
-SUBSCORES = [
-    "subject_consistency",
-    "background_consistency",
-    "motion_smoothness",
-    "aesthetic_quality",
-    "imaging_quality",
-]
+from ttsd.runners.utilities.run_layout import resolve_run_id, stage_output_dir
+from ttsd.runners.utilities.seed_vbench_loaders import (
+    SUBSCORES,
+    _iter_seed_dirs,
+    _load_vbench_rows,
+    _seed_idx_from_name,
+)
 
 FRAME_FILE = "posterior_mean_frame_neighbor_similarity.npy"
 POST_FILE = "posterior_mean_posterior_neighbor_similarity.npy"
@@ -359,32 +358,35 @@ def _print_progress_if_better(summary: dict[str, object],
         best["spearman_value"] = sp
         best["spearman_row"] = summary
         print(f"[NEW BEST Spearman] {summary['score_name']:<35} "
-              f"sp={sp:.4f}  winner={wm}/{np_}  top5_overlap={overlap:.4f}", flush=True)
+              f"sp={sp:.4f}  winner={wm}/{np_}  top5_overlap={overlap:.4f}", flush=True, file=sys.stderr)
     if wm > best["winner_value"] or (wm == best["winner_value"] and sp > best["winner_tiebreak"]):
         best["winner_value"] = wm
         best["winner_tiebreak"] = sp
         best["winner_row"] = summary
         print(f"[NEW BEST Winner ] {summary['score_name']:<35} "
-              f"winner={wm}/{np_}  sp={sp:.4f}  top5_overlap={overlap:.4f}", flush=True)
+              f"winner={wm}/{np_}  sp={sp:.4f}  top5_overlap={overlap:.4f}", flush=True, file=sys.stderr)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--heatmap-run-root", type=Path, required=True)
-    parser.add_argument("--vbench-long-csv", type=Path, required=True)
+    parser.add_argument("--heatmap-run-root", type=Path, default=None)
+    parser.add_argument("--vbench-long-csv", type=Path, default=None)
     parser.add_argument("--output-dir", type=Path, default=None)
+    parser.add_argument("--run-id", type=str, default=None,
+                        help="Fill unset input roots from runs/<stage>/<run-id>.")
     args = parser.parse_args()
+    resolve_run_id(args, parser, needs=["heatmap_run_root", "vbench_long_csv"])
 
-    output_dir = args.output_dir or (args.heatmap_run_root / "_advanced_reductions")
+    output_dir = args.output_dir or stage_output_dir(args.heatmap_run_root, "analysis", __file__)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     vbench_rows = _load_vbench_rows(args.vbench_long_csv)
     seed_records = _load_seed_records(args.heatmap_run_root, vbench_rows)
     print(f"Loaded {len(seed_records)} seeds, "
-          f"{len({r['prompt_id'] for r in seed_records})} prompts", flush=True)
+          f"{len({r['prompt_id'] for r in seed_records})} prompts", flush=True, file=sys.stderr)
 
     sweep = _build_sweep()
-    print(f"Sweep size: {len(sweep)} reductions", flush=True)
+    print(f"Sweep size: {len(sweep)} reductions", flush=True, file=sys.stderr)
 
     best = {
         "spearman_value": float("-inf"),
@@ -399,7 +401,7 @@ def main() -> None:
         rows.append(summary)
         _print_progress_if_better(summary, best)
         if idx % 20 == 0:
-            print(f"  ...{idx}/{len(sweep)} evaluated", flush=True)
+            print(f"  ...{idx}/{len(sweep)} evaluated", flush=True, file=sys.stderr)
 
     fieldnames = list(rows[0].keys())
     with (output_dir / "advanced_reductions_table.csv").open("w", newline="") as h:
@@ -459,8 +461,8 @@ def main() -> None:
             f"{r['subject_consistency_prompt_mean_spearman']:.4f} |"
         )
     (output_dir / "advanced_reductions_summary.md").write_text("\n".join(md_lines))
-    print(f"Wrote {output_dir / 'advanced_reductions_table.csv'}")
-    print(f"Wrote {output_dir / 'advanced_reductions_summary.md'}")
+    print(f"Wrote {output_dir / 'advanced_reductions_table.csv'}", file=sys.stderr)
+    print(f"Wrote {output_dir / 'advanced_reductions_summary.md'}", file=sys.stderr)
 
 
 if __name__ == "__main__":

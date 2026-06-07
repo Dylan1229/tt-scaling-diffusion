@@ -7,8 +7,8 @@ Headline artifact: per-prompt VBench-score variance across seeds → the
 TTS-necessity argument for the rest of the project.
 
 Usage:
-    python -m ttsd.runners.baseline --config configs/baseline_wan22_480p.yaml
-    python -m ttsd.runners.baseline --config configs/baseline_wan22_480p.yaml --smoke
+    python -m ttsd.runners.generate.baseline --config configs/baseline_wan22_480p.yaml
+    python -m ttsd.runners.generate.baseline --config configs/baseline_wan22_480p.yaml --smoke
 """
 
 from __future__ import annotations

@@ -15,7 +15,7 @@ class VerifierOutput:
 class Verifier(ABC):
     """Predicts final-video quality from intermediate denoising state.
 
-    Subclasses operate at one of three loci (see ROADMAP §4):
+    Subclasses operate at one of three loci:
       - pixel preview (decode latent → score with ViCLIP / aesthetic)
       - latent MLLM head (operate on hidden states, no decode)
       - lightweight probe (PCA + MLP on intermediate features)

@@ -1,4 +1,4 @@
-"""Generate figures + summary numbers for the SSL-property report.
+"""Generate figures + summary numbers for the DINOv2 feature-property report.
 
 Outputs (under --output-dir):
   fig_frame_heatmap_good_vs_bad.png
@@ -10,23 +10,24 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from collections import defaultdict
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-from ttsd.runners.posterior_mean_ridge_feature_model import _rankdata
-from ttsd.runners.posterior_mean_tail_rank import (
-    _iter_seed_dirs, _load_vbench_rows, _seed_idx_from_name,
+from ttsd.runners.utilities.ranking import _rankdata
+from ttsd.runners.utilities.run_layout import resolve_run_id, stage_output_dir
+from ttsd.runners.utilities.seed_vbench_loaders import (
+    SUBSCORES,
+    _iter_seed_dirs,
+    _load_vbench_rows,
+    _seed_idx_from_name,
 )
-
-SUBSCORES = [
-    "subject_consistency", "background_consistency", "motion_smoothness",
-    "aesthetic_quality", "imaging_quality",
-]
 
 
 def _avg_z_records(records):
@@ -58,11 +59,15 @@ def _patch_velcos_curve(F):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--heatmap-run-root", type=Path, required=True)
-    ap.add_argument("--patch-run-root", type=Path, required=True)
-    ap.add_argument("--vbench-long-csv", type=Path, required=True)
-    ap.add_argument("--output-dir", type=Path, required=True)
+    ap.add_argument("--heatmap-run-root", type=Path, default=None)
+    ap.add_argument("--patch-run-root", type=Path, default=None)
+    ap.add_argument("--vbench-long-csv", type=Path, default=None)
+    ap.add_argument("--output-dir", type=Path, default=None)
+    ap.add_argument("--run-id", type=str, default=None,
+                    help="Fill unset input roots from runs/<stage>/<run-id>.")
     args = ap.parse_args()
+    resolve_run_id(args, ap, needs=["heatmap_run_root", "patch_run_root", "vbench_long_csv"])
+    args.output_dir = args.output_dir or stage_output_dir(args.heatmap_run_root, "report", __file__)
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
     vb = _load_vbench_rows(args.vbench_long_csv)
@@ -112,7 +117,7 @@ def main():
     good = max(g, key=lambda x: x["avg_vbench_z"])
     bad = min(g, key=lambda x: x["avg_vbench_z"])
     print(f"[fig] prompt={pick}  good=seed{good['seed_idx']:04d} z={good['avg_vbench_z']:.2f}"
-          f"  bad=seed{bad['seed_idx']:04d} z={bad['avg_vbench_z']:.2f}")
+          f"  bad=seed{bad['seed_idx']:04d} z={bad['avg_vbench_z']:.2f}", file=sys.stderr)
 
     # ---------- Figure 1: frame-neighbor heatmaps good vs bad ----------
     fr_g = np.load(Path(good["seed_dir"]) / "posterior_mean_frame_neighbor_similarity.npy")
@@ -163,7 +168,7 @@ def main():
                   for sz in sizes}
 
     # Prompt-mean Spearman: per-prompt rank correlation, averaged across prompts in
-    # the subset. Matches metric_grid_search.py and ridge_feature_model.py.
+    # the subset. Matches similarity_reduction_gridsearch.py and feature_ridge_regression.py.
     prompt_ids = [r["prompt_id"] for r in records]
 
     def _rho_w_subset(x, y_, idx):
@@ -219,7 +224,7 @@ def main():
         "rho_w": scatter_rhos,
     }
     (args.output_dir / "metrics_summary.json").write_text(json.dumps(out_json, indent=2))
-    print(f"[fig] wrote figures to {args.output_dir}")
+    print(f"[fig] wrote figures to {args.output_dir}", file=sys.stderr)
 
 
 if __name__ == "__main__":
