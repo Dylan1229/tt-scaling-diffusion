@@ -10,8 +10,8 @@ import torch
 
 from ttsd.features.dino_cls import upto_gap_cosine_profiles
 from ttsd.verifiers.base import VerifierOutput
-from ttsd.verifiers.dino_score_artifacts import RbfSvrArtifact
-from ttsd.verifiers.dino_verifier_base import (
+from ttsd.verifiers.dino.artifacts import RbfSvrArtifact
+from ttsd.verifiers.dino.base import (
     DEFAULT_UPTO014_INDICES,
     ClsProvider,
     ProbeBackedDinoVerifier,

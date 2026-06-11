@@ -8,10 +8,10 @@ import numpy as np
 import torch
 
 from ttsd.verifiers.base import VerifierOutput
-from ttsd.verifiers.dino_frame_similarity_profile import DinoFrameSimilarityProfileProbe
-from ttsd.verifiers.dino_quantile_pca_ridge import DinoTemporalQuantilePCARidgeProbe
-from ttsd.verifiers.dino_score_artifacts import ScoreZFusionArtifact
-from ttsd.verifiers.dino_verifier_base import ClsProvider, ProbeBackedDinoVerifier
+from ttsd.verifiers.dino.artifacts import ScoreZFusionArtifact
+from ttsd.verifiers.dino.base import ClsProvider, ProbeBackedDinoVerifier
+from ttsd.verifiers.dino.frame_similarity_profile import DinoFrameSimilarityProfileProbe
+from ttsd.verifiers.dino.quantile_pca_ridge import DinoTemporalQuantilePCARidgeProbe
 
 
 @dataclass(frozen=True)

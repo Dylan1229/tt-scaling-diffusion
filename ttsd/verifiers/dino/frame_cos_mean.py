@@ -9,7 +9,7 @@ import torch
 
 from ttsd.features.dino_cls import frame_cosine_mean, select_step
 from ttsd.verifiers.base import VerifierOutput
-from ttsd.verifiers.dino_verifier_base import DEFAULT_STEP014_INDEX, ClsProvider, ProbeBackedDinoVerifier
+from ttsd.verifiers.dino.base import DEFAULT_STEP014_INDEX, ClsProvider, ProbeBackedDinoVerifier
 
 
 @dataclass(frozen=True)

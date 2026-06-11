@@ -10,15 +10,15 @@ from ttsd.features.dino_cls import (
     temporal_quantile_features,
     upto_gap_cosine_profiles,
 )
-from ttsd.verifiers.dino_frame_cos_mean import DinoFrameCosMeanProbe, DinoFrameCosMeanVerifier
-from ttsd.verifiers.dino_frame_similarity_profile import DinoFrameSimilarityProfileProbe
-from ttsd.verifiers.dino_max_z_fusion import CombinedDinoProbe
-from ttsd.verifiers.dino_quantile_pca_ridge import DinoTemporalQuantilePCARidgeProbe
-from ttsd.verifiers.dino_score_artifacts import (
+from ttsd.verifiers.dino.artifacts import (
     PCARidgeArtifact,
     RbfSvrArtifact,
     ScoreZFusionArtifact,
 )
+from ttsd.verifiers.dino.frame_cos_mean import DinoFrameCosMeanProbe, DinoFrameCosMeanVerifier
+from ttsd.verifiers.dino.frame_similarity_profile import DinoFrameSimilarityProfileProbe
+from ttsd.verifiers.dino.max_z_fusion import CombinedDinoProbe
+from ttsd.verifiers.dino.quantile_pca_ridge import DinoTemporalQuantilePCARidgeProbe
 
 
 def test_frame_neighbor_similarity_and_mean_probe() -> None:

@@ -10,8 +10,8 @@ import torch
 
 from ttsd.features.dino_cls import select_step, temporal_quantile_features
 from ttsd.verifiers.base import VerifierOutput
-from ttsd.verifiers.dino_score_artifacts import PCARidgeArtifact
-from ttsd.verifiers.dino_verifier_base import (
+from ttsd.verifiers.dino.artifacts import PCARidgeArtifact
+from ttsd.verifiers.dino.base import (
     DEFAULT_QUANTILES,
     DEFAULT_STEP014_INDEX,
     ClsProvider,
