@@ -15,10 +15,14 @@ from pathlib import Path
 import imageio.v3 as iio
 import matplotlib.pyplot as plt
 import numpy as np
-import torch
-import torch.nn.functional as F
-from PIL import Image
-from transformers import AutoImageProcessor, AutoModel
+
+from ttsd.features.dino_cls import (
+    DinoClsExtractor,
+    candidate_devices as _resolve_candidate_devices,
+    diagonal_similarity,
+    frame_neighbor_similarity,
+    posterior_neighbor_similarity,
+)
 
 MODEL_NAME = "facebook/dinov2-base"
 
@@ -31,21 +35,7 @@ def _sorted_video_files(video_dir: Path) -> list[Path]:
 
 
 def _candidate_devices(device_arg: str, gpu_indices: str | None) -> list[str]:
-    if device_arg != "cuda":
-        return [device_arg]
-
-    if not torch.cuda.is_available():
-        raise RuntimeError("Requested CUDA but torch.cuda.is_available() is false")
-
-    if gpu_indices:
-        indices = [part.strip() for part in gpu_indices.split(",") if part.strip()]
-    else:
-        indices = [str(i) for i in range(torch.cuda.device_count())]
-
-    if not indices:
-        raise ValueError("No CUDA devices were selected")
-
-    return [f"cuda:{idx}" for idx in indices]
+    return _resolve_candidate_devices(device_arg, gpu_indices)
 
 
 def _load_frame_grid(video_files: list[Path]) -> tuple[np.ndarray, list[str]]:
@@ -73,55 +63,24 @@ def _extract_features(
     batch_size: int,
     candidate_devices: list[str],
 ) -> tuple[np.ndarray, str]:
-    images = [Image.fromarray(frame) for frame in frame_grid.reshape(-1, *frame_grid.shape[2:])]
-    processor = AutoImageProcessor.from_pretrained(model_name)
-    last_error: Exception | None = None
-
-    for device in candidate_devices:
-        model = None
-        try:
-            model = AutoModel.from_pretrained(model_name).to(device)
-            model.eval()
-            features = []
-            with torch.no_grad():
-                for start in range(0, len(images), batch_size):
-                    batch = images[start : start + batch_size]
-                    inputs = processor(images=batch, return_tensors="pt")
-                    inputs = {name: tensor.to(device) for name, tensor in inputs.items()}
-                    outputs = model(**inputs)
-                    batch_features = outputs.last_hidden_state[:, 0]
-                    features.append(batch_features.cpu())
-            feature_tensor = torch.cat(features, dim=0)
-            feature_tensor = F.normalize(feature_tensor, dim=-1)
-            return feature_tensor.numpy().reshape(frame_grid.shape[0], frame_grid.shape[1], -1), device
-        except torch.OutOfMemoryError as exc:
-            last_error = exc
-            print(f"[cls_similarity] OOM on {device}; trying next device")
-        finally:
-            if model is not None:
-                del model
-            if device.startswith("cuda") and torch.cuda.is_available():
-                torch.cuda.empty_cache()
-
-    raise RuntimeError(f"Feature extraction failed on all candidate devices: {candidate_devices}") from last_error
+    extractor = DinoClsExtractor(
+        model_name=model_name,
+        batch_size=batch_size,
+        candidate_devices=tuple(candidate_devices),
+    )
+    return extractor.extract_grid(frame_grid)
 
 
 def _compute_diagonal_similarity(feature_grid: np.ndarray) -> np.ndarray:
-    current = feature_grid[:-1, :-1, :]
-    next_diag = feature_grid[1:, 1:, :]
-    return np.sum(current * next_diag, axis=-1)
+    return diagonal_similarity(feature_grid)
 
 
 def _compute_frame_neighbor_similarity(feature_grid: np.ndarray) -> np.ndarray:
-    current = feature_grid[:, :-1, :]
-    next_frame = feature_grid[:, 1:, :]
-    return np.sum(current * next_frame, axis=-1)
+    return frame_neighbor_similarity(feature_grid)
 
 
 def _compute_posterior_neighbor_similarity(feature_grid: np.ndarray) -> np.ndarray:
-    current = feature_grid[:-1, :, :]
-    next_posterior = feature_grid[1:, :, :]
-    return np.sum(current * next_posterior, axis=-1)
+    return posterior_neighbor_similarity(feature_grid)
 
 
 def _save_heatmap(
