@@ -10,12 +10,11 @@ from ttsd.features.dino_cls import (
     temporal_quantile_features,
     upto_gap_cosine_profiles,
 )
-from ttsd.verifiers.dino_cls import (
-    CombinedDinoProbe,
-    DinoClsQuantilePCARidgeProbe,
-    DinoFrameCosMeanProbe,
-    DinoFrameCosMeanVerifier,
-    DinoFrameSimilarityProfileProbe,
+from ttsd.verifiers.dino_frame_cos_mean import DinoFrameCosMeanProbe, DinoFrameCosMeanVerifier
+from ttsd.verifiers.dino_frame_similarity_profile import DinoFrameSimilarityProfileProbe
+from ttsd.verifiers.dino_max_z_fusion import CombinedDinoProbe
+from ttsd.verifiers.dino_quantile_pca_ridge import DinoTemporalQuantilePCARidgeProbe
+from ttsd.verifiers.dino_score_artifacts import (
     PCARidgeArtifact,
     RbfSvrArtifact,
     ScoreZFusionArtifact,
@@ -76,7 +75,7 @@ def test_pca_ridge_probe_scores_quantile_features() -> None:
         ridge_coef=np.asarray([2.0], dtype=np.float64),
         ridge_intercept=1.0,
     )
-    probe = DinoClsQuantilePCARidgeProbe(
+    probe = DinoTemporalQuantilePCARidgeProbe(
         artifact=artifact,
         step_index=0,
         quantiles=(0.0, 0.5, 1.0),
@@ -147,7 +146,7 @@ def test_combined_probe_max_z_fusion() -> None:
         gamma=0.0,
     )
     combined = CombinedDinoProbe(
-        quantile_probe=DinoClsQuantilePCARidgeProbe(
+        quantile_probe=DinoTemporalQuantilePCARidgeProbe(
             quantile_artifact,
             step_index=0,
             quantiles=(0.0,),
@@ -166,7 +165,7 @@ def test_combined_probe_max_z_fusion() -> None:
 
     details = combined.score_details(grid)
 
-    assert details["dino_cls_quantile_pca_ridge"] == 1.0
+    assert details["dino_temporal_quantile_pca_ridge"] == 1.0
     assert details["dino_frame_similarity_profile"] == 10.0
     assert details["combined_dino_max_z"] == 2.0
 

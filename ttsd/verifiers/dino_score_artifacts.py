@@ -1,27 +1,11 @@
-"""DINO CLS based verifier probes and concrete verifier wrappers."""
+"""Serializable score-model artifacts for DINO-based verifiers."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 import numpy as np
-import torch
-
-from ttsd.features.dino_cls import (
-    frame_cosine_mean,
-    select_step,
-    temporal_quantile_features,
-    upto_gap_cosine_profiles,
-)
-from ttsd.verifiers.base import Verifier, VerifierOutput
-
-DEFAULT_STEP014_INDEX = 3
-DEFAULT_UPTO014_INDICES = (0, 1, 2, 3)
-DEFAULT_QUANTILES = (0.05, 0.50, 0.95)
-
-ClsProvider = Callable[[torch.Tensor, str, int, int], np.ndarray]
 
 
 @dataclass(frozen=True)
@@ -37,11 +21,7 @@ class PCARidgeArtifact:
 
     @classmethod
     def from_sklearn_pipeline(cls, estimator: object) -> "PCARidgeArtifact":
-        """Build an artifact from a fitted sklearn pipeline.
-
-        This intentionally avoids importing sklearn at runtime; it only
-        introspects the fitted attributes we need.
-        """
+        """Build an artifact from a fitted sklearn pipeline."""
         scaler = _find_estimator_step(estimator, "StandardScaler")
         pca = _find_estimator_step(estimator, "PCA")
         ridge = _find_estimator_step(estimator, "Ridge")
@@ -93,9 +73,9 @@ class PCARidgeArtifact:
     def predict(self, features: np.ndarray) -> np.ndarray:
         x = _as_2d(features)
         _check_width(x, self.scaler_mean, "features", "scaler_mean")
-        scale = _safe_scale(self.scaler_scale)
-        x_scaled = (x - self.scaler_mean) / scale
+        x_scaled = (x - self.scaler_mean) / _safe_scale(self.scaler_scale)
         _check_width(x_scaled, self.pca_mean, "scaled features", "pca_mean")
+
         components = np.asarray(self.pca_components, dtype=np.float64)
         if components.ndim != 2:
             raise ValueError(f"pca_components must be 2D, got shape {components.shape}")
@@ -104,6 +84,7 @@ class PCARidgeArtifact:
                 "pca_components width does not match feature width: "
                 f"{components.shape[1]} vs {x_scaled.shape[1]}"
             )
+
         x_pca = (x_scaled - self.pca_mean) @ components.T
         coef = np.asarray(self.ridge_coef, dtype=np.float64).reshape(-1)
         if coef.shape[0] != x_pca.shape[1]:
@@ -179,6 +160,7 @@ class RbfSvrArtifact:
         x = _as_2d(features)
         _check_width(x, self.scaler_mean, "features", "scaler_mean")
         x_scaled = (x - self.scaler_mean) / _safe_scale(self.scaler_scale)
+
         support = np.asarray(self.support_vectors, dtype=np.float64)
         if support.ndim != 2:
             raise ValueError(f"support_vectors must be 2D, got shape {support.shape}")
@@ -187,6 +169,7 @@ class RbfSvrArtifact:
                 "support vector width does not match feature width: "
                 f"{support.shape[1]} vs {x_scaled.shape[1]}"
             )
+
         dual = np.asarray(self.dual_coef, dtype=np.float64).reshape(-1)
         if dual.shape[0] != support.shape[0]:
             raise ValueError(f"dual_coef length {dual.shape[0]} does not match support count {support.shape[0]}")
@@ -197,11 +180,7 @@ class RbfSvrArtifact:
 
 @dataclass(frozen=True)
 class ScoreZFusionArtifact:
-    """Score-level formula fusion calibration.
-
-    ``mode='max_z'`` matches the best fusion row from the verifier search:
-    take each base score's train-calibrated z-score and use their max.
-    """
+    """Score-level formula fusion calibration."""
 
     base_score_mean: np.ndarray
     base_score_scale: np.ndarray
@@ -249,212 +228,6 @@ class ScoreZFusionArtifact:
         if self.mode == "equal_zmean":
             return z_scores.mean(axis=1)
         raise ValueError(f"Unsupported fusion mode: {self.mode}")
-
-
-@dataclass(frozen=True)
-class DinoClsQuantilePCARidgeProbe:
-    artifact: PCARidgeArtifact
-    step_index: int | None = DEFAULT_STEP014_INDEX
-    quantiles: tuple[float, ...] = DEFAULT_QUANTILES
-
-    @classmethod
-    def from_npz(
-        cls,
-        path: str | Path,
-        *,
-        step_index: int | None = DEFAULT_STEP014_INDEX,
-        quantiles: tuple[float, ...] = DEFAULT_QUANTILES,
-    ) -> "DinoClsQuantilePCARidgeProbe":
-        return cls(PCARidgeArtifact.from_npz(path), step_index=step_index, quantiles=quantiles)
-
-    def feature_vector(self, cls_features: np.ndarray) -> np.ndarray:
-        step_features = select_step(cls_features, self.step_index)
-        return temporal_quantile_features(step_features, self.quantiles)
-
-    def score_cls_features(self, cls_features: np.ndarray) -> float:
-        return float(self.artifact.predict(self.feature_vector(cls_features))[0])
-
-
-@dataclass(frozen=True)
-class DinoFrameCosMeanProbe:
-    step_index: int | None = DEFAULT_STEP014_INDEX
-    gap: int = 1
-
-    def score_cls_features(self, cls_features: np.ndarray) -> float:
-        step_features = select_step(cls_features, self.step_index)
-        return frame_cosine_mean(step_features, gap=self.gap)
-
-
-@dataclass(frozen=True)
-class DinoFrameSimilarityProfileProbe:
-    artifact: RbfSvrArtifact
-    step_indices: tuple[int, ...] = DEFAULT_UPTO014_INDICES
-    gap: int = 1
-
-    @classmethod
-    def from_npz(
-        cls,
-        path: str | Path,
-        *,
-        step_indices: tuple[int, ...] = DEFAULT_UPTO014_INDICES,
-        gap: int = 1,
-    ) -> "DinoFrameSimilarityProfileProbe":
-        return cls(RbfSvrArtifact.from_npz(path), step_indices=step_indices, gap=gap)
-
-    def feature_vector(self, cls_features: np.ndarray) -> np.ndarray:
-        return upto_gap_cosine_profiles(cls_features, self.step_indices, gap=self.gap)
-
-    def score_cls_features(self, cls_features: np.ndarray) -> float:
-        return float(self.artifact.predict(self.feature_vector(cls_features))[0])
-
-
-@dataclass(frozen=True)
-class CombinedDinoProbe:
-    quantile_probe: DinoClsQuantilePCARidgeProbe
-    profile_probe: DinoFrameSimilarityProfileProbe
-    fusion_artifact: ScoreZFusionArtifact
-
-    def base_scores(self, cls_features: np.ndarray) -> np.ndarray:
-        return np.asarray(
-            [
-                self.quantile_probe.score_cls_features(cls_features),
-                self.profile_probe.score_cls_features(cls_features),
-            ],
-            dtype=np.float64,
-        )
-
-    def score_cls_features(self, cls_features: np.ndarray) -> float:
-        return float(self.fusion_artifact.predict(self.base_scores(cls_features))[0])
-
-    def score_details(self, cls_features: np.ndarray) -> dict[str, float]:
-        base = self.base_scores(cls_features)
-        fused = float(self.fusion_artifact.predict(base)[0])
-        return {
-            "combined_dino_max_z": fused,
-            "dino_cls_quantile_pca_ridge": float(base[0]),
-            "dino_frame_similarity_profile": float(base[1]),
-        }
-
-
-class _ProbeBackedVerifier(Verifier):
-    def __init__(
-        self,
-        *,
-        cls_provider: ClsProvider,
-        score_name: str,
-    ) -> None:
-        self.cls_provider = cls_provider
-        self.score_name = score_name
-
-    def _load_cls_features(
-        self,
-        latent: torch.Tensor,
-        prompt: str,
-        step: int,
-        total_steps: int,
-    ) -> np.ndarray:
-        cls_features = self.cls_provider(latent, prompt, step, total_steps)
-        return np.asarray(cls_features)
-
-
-class DinoClsQuantilePCARidgeVerifier(_ProbeBackedVerifier):
-    def __init__(
-        self,
-        probe: DinoClsQuantilePCARidgeProbe,
-        *,
-        cls_provider: ClsProvider,
-        score_name: str = "dino_cls_quantile_pca_ridge",
-    ) -> None:
-        super().__init__(cls_provider=cls_provider, score_name=score_name)
-        self.probe = probe
-
-    @classmethod
-    def from_npz(
-        cls,
-        artifact_path: str | Path,
-        *,
-        cls_provider: ClsProvider,
-        step_index: int | None = DEFAULT_STEP014_INDEX,
-        quantiles: tuple[float, ...] = DEFAULT_QUANTILES,
-    ) -> "DinoClsQuantilePCARidgeVerifier":
-        probe = DinoClsQuantilePCARidgeProbe.from_npz(
-            artifact_path,
-            step_index=step_index,
-            quantiles=quantiles,
-        )
-        return cls(probe, cls_provider=cls_provider)
-
-    def score(self, latent: torch.Tensor, prompt: str, step: int, total_steps: int) -> VerifierOutput:
-        cls_features = self._load_cls_features(latent, prompt, step, total_steps)
-        return VerifierOutput(score={self.score_name: self.probe.score_cls_features(cls_features)})
-
-
-class DinoFrameCosMeanVerifier(_ProbeBackedVerifier):
-    def __init__(
-        self,
-        *,
-        cls_provider: ClsProvider,
-        step_index: int | None = DEFAULT_STEP014_INDEX,
-        gap: int = 1,
-        score_name: str = "dino_cls_frame_cos_mean",
-    ) -> None:
-        super().__init__(cls_provider=cls_provider, score_name=score_name)
-        self.probe = DinoFrameCosMeanProbe(step_index=step_index, gap=gap)
-
-    def score(self, latent: torch.Tensor, prompt: str, step: int, total_steps: int) -> VerifierOutput:
-        cls_features = self._load_cls_features(latent, prompt, step, total_steps)
-        return VerifierOutput(score={self.score_name: self.probe.score_cls_features(cls_features)})
-
-
-class DinoFrameSimilarityProfileVerifier(_ProbeBackedVerifier):
-    def __init__(
-        self,
-        probe: DinoFrameSimilarityProfileProbe,
-        *,
-        cls_provider: ClsProvider,
-        score_name: str = "dino_frame_similarity_profile",
-    ) -> None:
-        super().__init__(cls_provider=cls_provider, score_name=score_name)
-        self.probe = probe
-
-    @classmethod
-    def from_npz(
-        cls,
-        artifact_path: str | Path,
-        *,
-        cls_provider: ClsProvider,
-        step_indices: tuple[int, ...] = DEFAULT_UPTO014_INDICES,
-        gap: int = 1,
-    ) -> "DinoFrameSimilarityProfileVerifier":
-        probe = DinoFrameSimilarityProfileProbe.from_npz(artifact_path, step_indices=step_indices, gap=gap)
-        return cls(probe, cls_provider=cls_provider)
-
-    def score(self, latent: torch.Tensor, prompt: str, step: int, total_steps: int) -> VerifierOutput:
-        cls_features = self._load_cls_features(latent, prompt, step, total_steps)
-        return VerifierOutput(score={self.score_name: self.probe.score_cls_features(cls_features)})
-
-
-class CombinedDinoVerifier(_ProbeBackedVerifier):
-    def __init__(
-        self,
-        probe: CombinedDinoProbe,
-        *,
-        cls_provider: ClsProvider,
-        score_name: str = "combined_dino_max_z",
-        include_base_scores: bool = True,
-    ) -> None:
-        super().__init__(cls_provider=cls_provider, score_name=score_name)
-        self.probe = probe
-        self.include_base_scores = include_base_scores
-
-    def score(self, latent: torch.Tensor, prompt: str, step: int, total_steps: int) -> VerifierOutput:
-        cls_features = self._load_cls_features(latent, prompt, step, total_steps)
-        if self.include_base_scores:
-            details = self.probe.score_details(cls_features)
-            if self.score_name != "combined_dino_max_z":
-                details[self.score_name] = details["combined_dino_max_z"]
-            return VerifierOutput(score=details)
-        return VerifierOutput(score={self.score_name: self.probe.score_cls_features(cls_features)})
 
 
 def _as_2d(values: np.ndarray) -> np.ndarray:
@@ -506,19 +279,3 @@ def _find_estimator_step(estimator: object, class_name: str) -> object:
         if step.__class__.__name__ == class_name:
             return step
     raise ValueError(f"Could not find fitted {class_name} in estimator {estimator!r}")
-
-
-__all__ = [
-    "ClsProvider",
-    "CombinedDinoProbe",
-    "CombinedDinoVerifier",
-    "DinoClsQuantilePCARidgeProbe",
-    "DinoClsQuantilePCARidgeVerifier",
-    "DinoFrameCosMeanProbe",
-    "DinoFrameCosMeanVerifier",
-    "DinoFrameSimilarityProfileProbe",
-    "DinoFrameSimilarityProfileVerifier",
-    "PCARidgeArtifact",
-    "RbfSvrArtifact",
-    "ScoreZFusionArtifact",
-]
