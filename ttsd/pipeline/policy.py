@@ -72,3 +72,53 @@ class NoOpPolicy(DecisionPolicy):
     @property
     def decide_at_steps(self) -> set[int]:
         return set()    # never bother the verifier
+
+
+@register_policy("fixed_threshold")
+class FixedThresholdPolicy(DecisionPolicy):
+    """At each configured checkpoint step, compare verifier_out.final_score_estimate
+    to `tau`. If below: emit StopAndFail. If above or equal: emit None (continue).
+
+    The simplest possible policy with real semantics — useful as a baseline
+    against the more sophisticated DynamicSlidingWindowPolicy (P3).
+
+    Args:
+      tau: threshold. final_score_estimate < tau → trigger StopAndFail.
+      decide_at_steps: iterable of step indices (0-based) at which to query
+                       the verifier. Single-step like EFD&I (e.g. [10]) is
+                       the typical use; multi-step is also supported.
+      stop_action_kind: which action to fire on failure. Default 'stop_and_fail';
+                        override to 'continue' or any other registered action.
+    """
+
+    def __init__(
+        self,
+        tau: float,
+        decide_at_steps: list[int] | int,
+        stop_action_kind: str = "stop_and_fail",
+    ):
+        self.tau = float(tau)
+        if isinstance(decide_at_steps, int):
+            decide_at_steps = [decide_at_steps]
+        self._decide_at_steps = {int(s) for s in decide_at_steps}
+        self.stop_action_kind = stop_action_kind
+
+    @property
+    def decide_at_steps(self) -> set[int]:
+        return self._decide_at_steps
+
+    def decide(self, verifier_out, ctx):
+        if ctx.step not in self._decide_at_steps:
+            return None
+        if verifier_out is None or verifier_out.final_score_estimate is None:
+            return None
+        score = verifier_out.final_score_estimate
+        # NaN guard — verifier returns NaN when posterior_mean wasn't captured.
+        if score != score:    # noqa: PLR0124  (NaN != NaN)
+            return None
+        if score < self.tau:
+            return ActionSpec(
+                kind=self.stop_action_kind,
+                params={"reason": f"score {score:.4f} < tau {self.tau:.4f} at step {ctx.step}"},
+            )
+        return None

@@ -128,12 +128,20 @@ class SequentialTrialSearch(SearchStrategy):
                 )
                 verifier_out = None
                 if run_verifier and step_state.latent is not None:
+                    # If the verifier needs posterior_mean, push it through a
+                    # known attribute so the verifier's score() can read it.
+                    # Online verifiers expose `set_posterior_mean`; others ignore.
+                    setter = getattr(ctx.verifier, "set_posterior_mean", None)
+                    if setter is not None:
+                        setter(step_state.posterior_mean)
                     verifier_out = ctx.verifier.score(
                         latent=step_state.latent,
                         prompt=request.prompt,
                         step=step_state.step,
                         total_steps=step_state.total_steps,
                     )
+                    if setter is not None:
+                        setter(None)    # release reference; next step refreshes
                     traj.score_history.append(verifier_out)
                     verifier_scores.append(verifier_out.final_score_estimate)
                     ctx.logger.log(
@@ -174,9 +182,11 @@ class SequentialTrialSearch(SearchStrategy):
                     return StepDirective(replace_latent=_result.new_latent)
                 return None
 
-            # Drive the model.
+            # Drive the model. Tell the adapter what to capture (e.g.
+            # posterior_mean) based on what the verifier asked for.
+            capture = getattr(ctx.verifier, "REQUIRES", set()) or set()
             t0 = time.monotonic()
-            gen_out = ctx.adapter.generate(request, on_step=_on_step)
+            gen_out = ctx.adapter.generate(request, on_step=_on_step, capture=capture)
             gen_wall_s = time.monotonic() - t0
             cumulative_cost = cumulative_cost + CostEstimate(
                 wall_clock_s=gen_wall_s, gpu_seconds=gen_wall_s,

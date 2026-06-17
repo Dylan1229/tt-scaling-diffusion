@@ -1,0 +1,53 @@
+# P2 smoke test — first real "decide at step 10" run.
+#
+# Drives Wan 2.2 with the online DINO frame-cosine-mean verifier and a fixed
+# threshold policy. At step 10 the verifier runs on the freshly captured
+# posterior mean (x0_hat). If the score is below `tau`, StopAndFail aborts
+# the trajectory. Otherwise generation completes normally.
+#
+# Tune `tau` to exercise either path:
+#   tau: 0.0    → always passes (continue path)
+#   tau: 0.99   → almost always fails (abort path)
+#   tau: 0.92   → real working point; ~ where natural Wan 2.2 videos sit
+
+model:
+  kind: wan22_ti2v_5b
+  params:
+    dtype: bf16
+    device: cuda
+    scheduler: unipc
+
+verifier:
+  kind: dino_frame_cos_mean_online
+  params:
+    dtype: bf16
+    device: cuda
+    gap: 1
+    dino_batch_size: 32
+
+policy:
+  kind: fixed_threshold
+  params:
+    tau: 0.92
+    decide_at_steps: [10]
+
+strategy:
+  kind: sequential_trial
+  params:
+    trials:
+      - { name: base, setup_actions: [] }
+
+budget:
+  wall_clock_s: 300
+
+log:
+  path: events.jsonl
+
+generation:
+  num_frames: 81
+  height: 480
+  width: 832
+  num_inference_steps: 50
+  guidance_scale: 5.0
+
+output_root: runs/pipeline

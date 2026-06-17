@@ -61,3 +61,33 @@ class Continue(Action):
 
     def apply(self, state: TrajectoryState, ctx: ApplyContext) -> ActionResult:
         return ActionResult(status="continue", reason="noop")
+
+
+@register_action("stop_and_fail")
+class StopAndFail(Action):
+    """Abort the current trajectory immediately. The strategy can then
+    escalate to the next trial (EFD&I-style) or return failure to the caller.
+
+    Triggers an AbortTrajectory through the model adapter's StepDirective.
+    Cost: only the work already spent up to this step. The point.
+    """
+
+    def __init__(self, reason: str = "policy_triggered"):
+        self.reason = reason
+
+    def apply(self, state: TrajectoryState, ctx: ApplyContext) -> ActionResult:
+        return ActionResult(status="abort", reason=self.reason)
+
+
+@register_action("stop_and_accept")
+class StopAndAccept(Action):
+    """Commit to the trajectory as-is — verifier says it's good enough."""
+
+    def __init__(self, reason: str = "policy_accepted"):
+        self.reason = reason
+
+    def apply(self, state: TrajectoryState, ctx: ApplyContext) -> ActionResult:
+        # P2 doesn't yet teach the strategy to short-circuit on 'accept' —
+        # we keep the trajectory running, just log the acceptance. P3 will
+        # add an early-exit path that decodes the current x0_hat as final.
+        return ActionResult(status="accept", reason=self.reason)

@@ -54,6 +54,7 @@ class ModelAdapter(Protocol):
         self,
         request: GenerationRequest,
         on_step: Callable[[StepState], StepDirective | None] | None = None,
+        capture: set[str] | None = None,
     ) -> GenerationOutput: ...
 
 
@@ -84,8 +85,45 @@ class WanModelAdapter:
         self,
         request: GenerationRequest,
         on_step: Callable[[StepState], StepDirective | None] | None = None,
+        capture: set[str] | None = None,
     ) -> GenerationOutput:
+        """If `capture` includes 'posterior_mean', we wrap scheduler.step to
+        compute x0_hat each step and stuff the freshest one into the next
+        StepState handed to `on_step`. Memory is O(1) — only the most recent
+        posterior_mean is held, then replaced on the next step."""
+        capture = capture or set()
+        need_pm = "posterior_mean" in capture
         aborted_at: list[int] = []
+        last_pm: list[torch.Tensor | None] = [None]
+        step_counter: list[int] = [0]
+        original_scheduler_step = None
+
+        pipe = self._impl._pipe
+        if need_pm:
+            # Lazy-load so the scheduler reference is valid.
+            self._impl._load()
+            pipe = self._impl._pipe
+            original_scheduler_step = pipe.scheduler.step
+
+            def _wrapped_step(model_output, timestep, sample, **kwargs):
+                # Compute x0_hat at this step (cheap algebra; no extra forward).
+                # step_idx tracking matters only for Euler schedulers where the
+                # fallback formula reads scheduler.sigmas[step_idx]. For UniPC
+                # (our default) it's ignored because convert_model_output is
+                # self-sufficient.
+                from ttsd.models.wan22_adapter import _posterior_mean_from_step
+
+                try:
+                    posterior = _posterior_mean_from_step(
+                        pipe.scheduler, model_output, sample, step_idx=step_counter[0]
+                    )
+                    last_pm[0] = posterior.detach()
+                except Exception:    # pragma: no cover — never fail generation on capture issues
+                    last_pm[0] = None
+                step_counter[0] += 1
+                return original_scheduler_step(model_output, timestep, sample, **kwargs)
+
+            pipe.scheduler.step = _wrapped_step
 
         def _cb(pipe, step_idx, timestep, callback_kwargs):
             latents = callback_kwargs.get("latents")
@@ -96,6 +134,7 @@ class WanModelAdapter:
                 total_steps=request.num_inference_steps,
                 timestep=timestep,
                 latent=latents,
+                posterior_mean=last_pm[0] if need_pm else None,
             )
             directive = on_step(state)
             if directive is None:
@@ -126,5 +165,8 @@ class WanModelAdapter:
                 aborted=True,
                 abort_at_step=aborted_at[-1] if aborted_at else None,
             )
+        finally:
+            if need_pm and original_scheduler_step is not None:
+                self._impl._pipe.scheduler.step = original_scheduler_step
 
         return GenerationOutput(frames=result.frames)
