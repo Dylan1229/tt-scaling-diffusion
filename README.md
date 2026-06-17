@@ -134,11 +134,59 @@ under `ttsd.runners.report.*` — see [`ttsd/runners/README.md`](./ttsd/runners/
 
 ---
 
+## End-to-end test-time-scaling pipeline
+
+`ttsd/pipeline/` is the inference-time backbone: it drives a diffusion model through
+denoising, queries a verifier on intermediate state, and lets a decision policy trigger
+search/intervention strategies (EFD&I-style tiered intervention, naive best-of-N, …).
+Everything is plug-and-play via a registry — add a model/verifier/policy/action/strategy
+by registering it and naming it in a config; no orchestrator edits. Full design:
+[`docs/e2e_framework_plan.md`](./docs/e2e_framework_plan.md).
+
+**Single run** (one prompt, one config):
+```bash
+# EFD&I-style tiered intervention (base → anchor-inject → prompt-refine)
+python -m ttsd.runners.pipeline.run_pipeline \
+  --config configs/pipeline/efdi_dino.yaml \
+  --prompt "a person swimming in ocean" --seed 0 --run-id my_run
+
+# Naive best-of-N (N=4 candidates, keep highest-scoring)
+python -m ttsd.runners.pipeline.run_pipeline \
+  --config configs/pipeline/bon_dino.yaml \
+  --prompt "a person swimming in ocean" --seed 0 --run-id my_bon_run
+```
+Each run writes `runs/pipeline/<run_id>/`: `video.mp4`, `events.jsonl` (every verifier
+call / policy decision / action), `result.json` (success, final score, per-trial cost),
+and `config.snapshot.json`.
+
+**Multi-GPU sweep** (prompt × seed × strategy grid, sharded, resumable):
+```bash
+SWEEP_ID=my_sweep GPUS=0,1,2,3 scripts/run_pipeline_sweep_4gpu.sh
+# grid defined in configs/pipeline/sweeps/efdi_vs_bon_5x5.yaml
+# → runs/pipeline_sweeps/<SWEEP_ID>/<strategy>/<prompt_id>__seed<NNNN>/
+```
+Re-launch the same `SWEEP_ID` to skip completed items. Quick test: prepend
+`LIMIT_PROMPTS=1 LIMIT_SEEDS=1`.
+
+**Cost-vs-score Pareto plot** (compare strategies):
+```bash
+python -m ttsd.runners.pipeline.pareto_plot \
+  --runs runs/pipeline_sweeps/<SWEEP_ID>/*/* \
+  --output-dir runs/pipeline_sweeps/<SWEEP_ID>/_pareto
+# → pareto.png + pareto_data.csv  (gitignored — regenerate from the run dirs)
+```
+
+> Pipeline outputs (videos, `events.jsonl`, Pareto plots, CSVs) all live under `runs/`
+> and are **gitignored** — regenerate them with the commands above. Only the code,
+> configs, scripts, and docs are version-controlled.
+
+---
+
 ## What gets committed to GitHub
 
-The `.gitignore` is set up so that `git add -A` produces a clean upload. **Excluded:** `external/` (recover via `setup_external.sh`), `runs/` (regenerate from `config.snapshot.yaml`), weight files, video files, `.venv/`, `__pycache__/`, IDE configs, secrets.
+The `.gitignore` is set up so that `git add -A` produces a clean upload. **Excluded:** `external/` (recover via `setup_external.sh`), `runs/` (all experiment + pipeline + analysis outputs — videos, latents, `events.jsonl`, scores, Pareto plots — regenerate from `config.snapshot.*`), weight files, video files, `.venv/`, `__pycache__/`, IDE configs, secrets.
 
-**Included:** `README.md`, `LICENSE`, `pyproject.toml`, `constraints-generation.txt`, `.gitignore`, `ttsd/`, `configs/`, `scripts/`, `external/.gitkeep`. ≈ a few hundred KB; clone + `setup_external.sh` + `pip install` reproduces the starting point.
+**Included** (everything needed to set up and use the repo): `README.md`, `docs/`, `LICENSE`, `pyproject.toml`, `constraints-generation.txt`, `.gitignore`, `ttsd/`, `configs/`, `scripts/`, `external/.gitkeep`. ≈ a few hundred KB; clone + `setup_external.sh` + `pip install` reproduces the starting point.
 
 ---
 
