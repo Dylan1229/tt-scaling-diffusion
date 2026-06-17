@@ -1,0 +1,26 @@
+# Pipeline sweep — EFD&I-tiered vs. naive BoN-4 on a small grid.
+#
+# 5 prompts (first 5 of SWEEP_V2_PROMPTS) × 5 seeds (0..4) × 2 strategies = 50 runs.
+# At ~150 s per EFD&I and ~300 s per BoN, total compute is ~5.6 GPU-hours.
+# Sharded across 4 GPUs (0..3 by default via scripts/run_pipeline_sweep_4gpu.sh):
+# ~1.4 wall-clock hours when balanced.
+#
+# The two referenced pipeline configs are unchanged from P3/P4 smoke tests —
+# this sweep just runs them on every (prompt, seed) combination.
+
+prompts:
+  source: ttsd.prompts.sweep_v2:SWEEP_V2_PROMPTS
+  limit: 5                                       # first 5 prompts only
+
+seeds:
+  base: 0
+  count: 5                                       # seeds 0..4
+
+strategies:
+  - id: efdi
+    config: configs/pipeline/efdi_dino.yaml
+  - id: bon4
+    config: configs/pipeline/bon_dino.yaml
+
+output:
+  sweep_root: runs/pipeline_sweeps
