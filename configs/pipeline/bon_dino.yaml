@@ -1,0 +1,52 @@
+# Naive best-of-N baseline with DINO frame-cos-mean as the ranker.
+#
+# Generates N=4 independent Wan generations from consecutive seeds, scores
+# each at the last denoising step (where x0_hat ≈ final video), returns the
+# highest-scoring one. Same prompt, same model, same scheduler — only the
+# initial noise differs across candidates.
+#
+# Sized for ~5 minutes per call on one Blackwell GPU (4 × ~60s + verifier
+# overhead). For real Pareto experiments, parameterize N via a sweep
+# (P5 will add a multi-GPU launcher that fans candidates across cards).
+
+model:
+  kind: wan22_ti2v_5b
+  params:
+    dtype: bf16
+    device: cuda
+    scheduler: unipc
+
+verifier:
+  kind: dino_frame_cos_mean_online
+  params:
+    dtype: bf16
+    device: cuda
+    gap: 1
+    dino_batch_size: 32
+
+policy:
+  kind: best_of_n
+  params:
+    score_at_step: 49        # last step (num_inference_steps - 1)
+
+strategy:
+  kind: parallel_candidates
+  params:
+    n_candidates: 4
+    score_at_step: 49
+    seed_step: 1             # consecutive seeds
+
+budget:
+  wall_clock_s: 900
+
+log:
+  path: events.jsonl
+
+generation:
+  num_frames: 81
+  height: 480
+  width: 832
+  num_inference_steps: 50
+  guidance_scale: 5.0
+
+output_root: runs/pipeline

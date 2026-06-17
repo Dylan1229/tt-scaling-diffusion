@@ -124,6 +124,32 @@ class FixedThresholdPolicy(DecisionPolicy):
         return None
 
 
+@register_policy("best_of_n")
+class BestOfNPolicy(DecisionPolicy):
+    """No-op policy that just *advertises* a checkpoint step.
+
+    BoN's "best-of-N" decision lives in `ParallelCandidateSearch` (the
+    strategy), not in this policy: the strategy fans out N candidates, calls
+    the verifier on each at the configured checkpoint, then ranks. The
+    policy itself never returns an ActionSpec.
+
+    What this class does buy us: a clean `decide_at_steps={score_at_step}`
+    declaration so that any orchestrator path which honors `decide_at_steps`
+    will trigger the verifier at the right step. It also documents intent in
+    the YAML: `policy.kind: best_of_n` is more readable than `policy.kind: noop`.
+    """
+
+    def __init__(self, score_at_step: int):
+        self.score_at_step = int(score_at_step)
+
+    @property
+    def decide_at_steps(self) -> set[int]:
+        return {self.score_at_step}
+
+    def decide(self, verifier_out, ctx):
+        return None
+
+
 @register_policy("dynamic_sliding_window")
 class DynamicSlidingWindowPolicy(DecisionPolicy):
     """EFD&I's dynamic detector (simplified).
