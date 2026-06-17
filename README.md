@@ -8,49 +8,78 @@ Base model: **Wan 2.2 TI2V-5B** (T2V mode, 480p). Evaluation: **VBench**.
 
 ## Repository layout
 
+The repo has **two layers**: an *offline* data/analysis stack (generate clips →
+score with VBench → extract DINO features → study what predicts quality) that
+produces and validates verifiers, and an *online* **pipeline framework**
+(`ttsd/pipeline/`) that uses those verifiers live during sampling to detect and
+intervene on failing generations.
+
 ```
 tt-scaling-diffusion/
 ├── README.md
-├── LICENSE                        # Apache-2.0
-├── pyproject.toml                 # package + dependency definition
-├── constraints-generation.txt     # pinned cu128 wheel versions (Blackwell generation env)
+├── LICENSE                         # Apache-2.0
+├── pyproject.toml                  # package + dependency definition
+├── constraints-generation.txt      # pinned cu128 wheel versions (Blackwell env)
+├── docs/
+│   └── e2e_framework_plan.md       # design doc for the pipeline framework (read this first)
 │
-├── ttsd/                          # first-party package
-│   ├── models/wan22_adapter.py    #   diffusers WanPipeline wrapper (T2V) + posterior-mean capture
-│   ├── prompts/                   #   dev_set.py, sweep_v2.py — VBench prompt lists
-│   ├── eval/vbench.py             #   VBench in custom_input mode → CSVs
-│   ├── verifiers/base.py          #   Verifier interface (Phase 1)
-│   ├── search/base.py             #   SearchPolicy interface (Phase 2)
-│   └── runners/                   #   CLI entry points: python -m ttsd.runners.<sub>.<module>
-│       ├── utilities/             #     shared seed/VBench loaders + ranking helper
-│       ├── generate/              #     baseline sweep, latent decode
-│       ├── features/              #     DINOv2 CLS + patch feature extraction
-│       ├── analysis/              #     VBench-alignment analyses
-│       └── report/                #     figure generation
+├── ttsd/                           # ── first-party package ───────────────────
+│   ├── models/wan22_adapter.py     #   diffusers WanPipeline wrapper (T2V) + posterior-mean / scheduler-swap
+│   ├── prompts/                    #   dev_set.py, sweep_v2.py — VBench prompt lists
+│   ├── eval/vbench.py              #   VBench in custom_input mode → CSVs
+│   ├── features/dino_cls.py        #   reusable DINOv2 CLS feature math
+│   │
+│   ├── verifiers/                  #   ── quality signal: predict final score from intermediate state ──
+│   │   ├── base.py                 #     Verifier ABC (score() + REQUIRES set)
+│   │   ├── noop.py                 #     constant-score stub (smoke tests)
+│   │   └── dino/                   #     DINO-based verifiers
+│   │       ├── *.py                #       offline probes (frame-cos-mean, similarity-profile, PCA-ridge, max-z fusion)
+│   │       └── online_adapter.py   #       live wrap: decode x0_hat → DINOv2 → score (used by the pipeline)
+│   │
+│   ├── pipeline/                   #   ── e2e inference backbone (the framework) ──
+│   │   ├── orchestrator.py         #     conductor: load plugins → run strategy → emit RunResult
+│   │   ├── registry.py             #     name → class plugin table (@register_model/verifier/policy/action/strategy)
+│   │   ├── config.py               #     typed PipelineConfig dataclasses + YAML loader
+│   │   ├── core.py                 #     shared dataclasses (TrajectoryState, StepState, ActionSpec, ...)
+│   │   ├── model_adapter.py        #     ModelAdapter Protocol + WanModelAdapter (on_step hook, latent capture/inject)
+│   │   ├── policy.py               #     DecisionPolicy: noop / fixed_threshold / dynamic_sliding_window / best_of_n
+│   │   ├── actions.py              #     Action: continue / stop_and_fail / single_frame_anchor_inject (T1) / refine_prompt_vlm (T2)
+│   │   ├── vlm.py                  #     pluggable VLMClient for prompt refinement (provider left open)
+│   │   ├── budget.py               #     wall-clock / GPU-seconds / VLM-token tracking
+│   │   └── logger.py               #     JSON-lines event telemetry
+│   │
+│   ├── search/                     #   ── SearchStrategy: the outer loop ──
+│   │   ├── base.py                 #     SearchStrategy ABC + RunContext
+│   │   ├── sequential.py           #     SequentialTrialSearch (EFD&I tiered escalation)
+│   │   └── parallel.py             #     ParallelCandidateSearch (naive best-of-N)
+│   │
+│   └── runners/                    #   ── CLI entry points: python -m ttsd.runners.<sub>.<module> ──
+│       ├── generate/               #     baseline sweep, latent decode
+│       ├── features/               #     DINOv2 CLS + patch feature extraction
+│       ├── analysis/               #     VBench-alignment analyses
+│       ├── report/                 #     figure generation
+│       ├── utilities/              #     shared seed/VBench loaders + ranking helper
+│       └── pipeline/               #     run_pipeline (single) · sweep (grid) · pareto_plot (compare)
 │
-├── configs/                       # sweep YAMLs
-├── scripts/                       # multi-GPU launch / batch wrappers
-├── external/                      # vendored upstreams (gitignored): t2v-search, VBench
-└── runs/                          # experiment outputs (gitignored)
-    ├── baseline/<run_id>/<prompt_id>/seed<NNNN>/
-    │   ├── video.mp4
-    │   ├── latents/step_NNN.pt          # noisy latent x_t snapshots
-    │   ├── posterior_means/step_NNN.pt  # x0_hat snapshots
-    │   ├── meta.json
-    │   └── DONE                         # resume marker
-    ├── dino_input_frames/<run_id>/...   # posterior-mean latents decoded to frames (DINOv2 input)
-    ├── cls_features/<run_id>/...         # DINOv2 CLS features + similarity matrices
-    ├── patch_features/<run_id>/...       # DINOv2 patch tokens
-    ├── vbench/<run_id>/...               # VBench scores
-    ├── analysis/                         # alignment CSVs / summaries
-    ├── report/                           # figures
-    └── logs/                             # run logs
+├── configs/
+│   ├── *.yaml                      # offline generation sweep configs
+│   └── pipeline/                   # pipeline configs: efdi_dino, bon_dino, *_smoke + sweeps/
+├── scripts/                        # multi-GPU tmux launchers / batch wrappers
+├── external/                       # vendored upstreams (gitignored): t2v-search, VBench
+└── runs/                           # ALL outputs (gitignored — regenerate from config snapshots)
+    ├── baseline/<run_id>/<prompt_id>/seed<NNNN>/   # video.mp4 + latents/ + posterior_means/ + meta.json
+    ├── dino_input_frames/ · cls_features/ · patch_features/   # offline feature stages
+    ├── vbench/ · analysis/ · report/               # offline scoring + analysis
+    ├── pipeline/<run_id>/                          # single pipeline run: video.mp4 + events.jsonl + result.json
+    └── pipeline_sweeps/<sweep_id>/<strategy>/<prompt_id>__seed<NNNN>/   # sweep grid + _pareto/
 ```
 
 **Three-tier code separation:**
 - `ttsd/` — first-party. The only place we put real implementation work.
-- `external/` — vendored upstreams, treated as read-only references. Never edited (except the one-line VBench setup-guard patch, applied by `setup_external.sh`).
-- `runs/` — outputs. Reproducible from the `config.snapshot.yaml` written into each run dir.
+- `external/` — vendored upstreams, read-only references. Never edited (except the one-line VBench setup-guard patch, applied by `setup_external.sh`).
+- `runs/` — outputs. Reproducible from the `config.snapshot.{yaml,json}` written into each run dir; gitignored.
+
+**Pipeline extension model:** add a backbone / verifier / policy / action / strategy by writing one class, registering it with the matching `@register_*` decorator, and naming it (`kind:`) in a YAML config — no orchestrator edits. See [`docs/e2e_framework_plan.md`](./docs/e2e_framework_plan.md).
 
 ---
 
