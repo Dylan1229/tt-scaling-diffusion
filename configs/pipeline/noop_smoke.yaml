@@ -1,0 +1,43 @@
+# P1 smoke test — NoOp orchestrator.
+#
+# All components are no-ops, so the pipeline should produce a video
+# byte-identical (modulo file metadata) to running ttsd.runners.generate.baseline
+# at the same prompt + seed. This is the proof-of-life for the orchestrator,
+# registry, config, logger, budget, trajectory, and on_step plumbing.
+
+model:
+  kind: wan22_ti2v_5b
+  params:
+    dtype: bf16
+    device: cuda
+    scheduler: unipc
+
+verifier:
+  kind: noop
+  params:
+    constant_score: 1.0
+
+policy:
+  kind: noop
+  params: {}
+
+strategy:
+  kind: sequential_trial
+  params:
+    trials:
+      - { name: base, setup_actions: [] }
+
+budget:
+  wall_clock_s: 300
+
+log:
+  path: events.jsonl
+
+generation:
+  num_frames: 81
+  height: 480
+  width: 832
+  num_inference_steps: 50
+  guidance_scale: 5.0
+
+output_root: runs/pipeline

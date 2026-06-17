@@ -12,6 +12,7 @@ from ttsd.verifiers.dino import (
     RbfSvrArtifact,
     ScoreZFusionArtifact,
 )
+from ttsd.verifiers.noop import NoOpVerifier
 
 __all__ = [
     "CombinedDinoProbe",
@@ -22,6 +23,7 @@ __all__ = [
     "DinoFrameSimilarityProfileVerifier",
     "DinoTemporalQuantilePCARidgeProbe",
     "DinoTemporalQuantilePCARidgeVerifier",
+    "NoOpVerifier",
     "PCARidgeArtifact",
     "RbfSvrArtifact",
     "ScoreZFusionArtifact",
