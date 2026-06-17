@@ -1,0 +1,81 @@
+# P3 smoke test — full EFD&I-style tiered intervention with our DINO verifier.
+#
+# Three trials in escalation order:
+#   Trial 0  base         — vanilla Wan generation
+#   Trial 1  anchor       — single-frame x0_hat injected as initial latent
+#   Trial 2  prompt+refine — VLM-refined prompt (NoOp stub by default;
+#                            swap vlm.kind for a real provider)
+#
+# The DynamicSlidingWindow policy averages the last 3 verifier scores at
+# steps [8, 9, 10]; if mean < tau the strategy aborts that trial and
+# escalates to the next.
+#
+# Tune tau to exercise different escalation paths:
+#   tau: 0.85  → Trial 0 usually passes on natural Wan output
+#   tau: 0.93  → Trial 0 likely fails; Trial 1/2 may or may not succeed
+#   tau: 0.99  → forces all trials to fail; demonstrates the full escalation
+#                cascade end-to-end and a final success=False with all
+#                failed_trials logged.
+
+model:
+  kind: wan22_ti2v_5b
+  params:
+    dtype: bf16
+    device: cuda
+    scheduler: unipc
+
+verifier:
+  kind: dino_frame_cos_mean_online
+  params:
+    dtype: bf16
+    device: cuda
+    gap: 1
+    dino_batch_size: 32
+
+policy:
+  kind: dynamic_sliding_window
+  params:
+    tau: 0.93
+    decide_at_steps: [8, 9, 10]
+    window: 3
+    aggregator: mean
+    stop_action_kind: stop_and_fail
+
+strategy:
+  kind: sequential_trial
+  params:
+    trials:
+      - name: base
+        setup_actions: []
+
+      - name: anchor_inject
+        setup_actions:
+          - kind: single_frame_anchor_inject
+            params:
+              k_img: 6                    # capture x0_hat at this early step
+              anchor_num_frames: 5
+              anchor_steps: 20
+              blend_alpha: 0.5            # 0.5 * fresh_noise + 0.5 * anchor
+
+      - name: prompt_refine
+        setup_actions:
+          - kind: refine_prompt_vlm
+            params:
+              vlm:
+                kind: quality_modifier_stub
+                params: {}
+
+budget:
+  wall_clock_s: 600
+
+log:
+  path: events.jsonl
+
+generation:
+  num_frames: 81
+  height: 480
+  width: 832
+  num_inference_steps: 50
+  guidance_scale: 5.0
+
+output_root: runs/pipeline

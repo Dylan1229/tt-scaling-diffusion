@@ -122,3 +122,85 @@ class FixedThresholdPolicy(DecisionPolicy):
                 params={"reason": f"score {score:.4f} < tau {self.tau:.4f} at step {ctx.step}"},
             )
         return None
+
+
+@register_policy("dynamic_sliding_window")
+class DynamicSlidingWindowPolicy(DecisionPolicy):
+    """EFD&I's dynamic detector (simplified).
+
+    Aggregates the most-recent `window` verifier scores from
+    ctx.state.score_history. When the rolling aggregate falls below `tau` AT
+    or AFTER the latest decide_at_step, emit StopAndFail.
+
+    Decision schedule: queries the verifier at each step in `decide_at_steps`
+    (must be a list). The action only fires once the window is fully
+    populated (≥ `window` scores) AND ctx.step is the FINAL element of
+    decide_at_steps — early scores warm up the window without forcing a
+    decision. This mirrors EFD&I's "wait until we have a stable estimate".
+
+    Params:
+        tau: rolling threshold. aggregate < tau → trigger stop_action.
+        decide_at_steps: ordered list of step indices to query.
+        window: number of recent scores in the rolling aggregate.
+        aggregator: 'mean' (default) | 'median' | 'min'.
+        stop_action_kind: action to dispatch on failure.
+    """
+
+    def __init__(
+        self,
+        tau: float,
+        decide_at_steps: list[int],
+        window: int = 3,
+        aggregator: str = "mean",
+        stop_action_kind: str = "stop_and_fail",
+    ):
+        self.tau = float(tau)
+        self._decide_at_steps = [int(s) for s in decide_at_steps]
+        self._decide_set = set(self._decide_at_steps)
+        self._final_decide_step = max(self._decide_at_steps) if self._decide_at_steps else -1
+        self.window = int(window)
+        if aggregator not in ("mean", "median", "min"):
+            raise ValueError(f"aggregator must be mean|median|min, got {aggregator!r}")
+        self.aggregator = aggregator
+        self.stop_action_kind = stop_action_kind
+
+    @property
+    def decide_at_steps(self) -> set[int]:
+        return self._decide_set
+
+    def _aggregate(self, scores: list[float]) -> float:
+        if not scores:
+            return float("nan")
+        if self.aggregator == "mean":
+            return sum(scores) / len(scores)
+        if self.aggregator == "median":
+            s = sorted(scores)
+            n = len(s)
+            return s[n // 2] if n % 2 else 0.5 * (s[n // 2 - 1] + s[n // 2])
+        return min(scores)    # 'min'
+
+    def decide(self, verifier_out, ctx):
+        # Only decide at the final scheduled step (after the window has had
+        # a chance to fill with intermediate scores).
+        if ctx.step != self._final_decide_step:
+            return None
+        recent = [
+            out.final_score_estimate
+            for out in ctx.state.score_history[-self.window:]
+            if out.final_score_estimate is not None
+            and out.final_score_estimate == out.final_score_estimate    # NaN-skip
+        ]
+        if len(recent) == 0:
+            return None
+        agg = self._aggregate(recent)
+        if agg < self.tau:
+            return ActionSpec(
+                kind=self.stop_action_kind,
+                params={
+                    "reason": (
+                        f"{self.aggregator}({recent}) = {agg:.4f} < tau {self.tau:.4f} "
+                        f"at step {ctx.step}"
+                    ),
+                },
+            )
+        return None

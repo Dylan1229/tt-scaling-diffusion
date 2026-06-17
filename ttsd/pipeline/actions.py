@@ -17,6 +17,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
+import torch
+
 from ttsd.pipeline.core import ActionResult, CostEstimate, TrajectoryState
 from ttsd.pipeline.registry import ACTIONS, register_action
 
@@ -87,7 +89,151 @@ class StopAndAccept(Action):
         self.reason = reason
 
     def apply(self, state: TrajectoryState, ctx: ApplyContext) -> ActionResult:
-        # P2 doesn't yet teach the strategy to short-circuit on 'accept' —
-        # we keep the trajectory running, just log the acceptance. P3 will
-        # add an early-exit path that decodes the current x0_hat as final.
+        # The strategy treats trial completion-without-abort as acceptance,
+        # so this action records the explicit accept but doesn't change the
+        # trajectory. Useful for logging when policy is sure mid-trial.
         return ActionResult(status="accept", reason=self.reason)
+
+
+# ── EFD&I Trial 1 ─────────────────────────────────────────────────────────────
+
+@register_action("single_frame_anchor_inject")
+class SingleFrameAnchorInject(Action):
+    """EFD&I Trial 1 — generate a short side-rollout, capture its x0_hat at
+    an early step, broadcast it across the video temporal axis, and emit
+    `initial_latent` so the next trial starts from a semantically-anchored
+    latent rather than fresh noise.
+
+    Faithful-ish to the paper: EFD&I uses num_frames=1 (true single-image).
+    We default to a short multi-frame rollout because Wan's VAE temporal
+    compression makes 1-frame edge-casey; with `anchor_num_frames=5` the
+    latent has temporal length ~2 and broadcasts cleanly. The single-frame
+    path is available via `anchor_num_frames=1` if your backbone supports it.
+
+    The semantic-anchor gate (˜s_img ≥ ˜s_0 + δ) from the paper is NOT
+    implemented in v1 — the strategy unconditionally runs this trial when it
+    appears in the trial sequence. Add the gate later by computing the
+    anchor's verifier score and skipping if not improved.
+
+    Params:
+        k_img: step index at which to capture the anchor x0_hat (single-frame
+               rollout aborts after this step).
+        anchor_num_frames: frames in the side-rollout (5 = safe default).
+        anchor_steps: total denoising steps in the side-rollout
+                      (lower = cheaper; 20 is a reasonable cap).
+        blend_alpha: 0..1 mix between fresh noise and broadcast anchor used
+                     as initial_latent. 1.0 = pure anchor (strongest bias,
+                     hardest to interpret); 0.5 = even mix; 0.0 = no anchor
+                     (no-op — equivalent to vanilla generation).
+    """
+
+    def __init__(
+        self,
+        k_img: int = 8,
+        anchor_num_frames: int = 5,
+        anchor_steps: int = 20,
+        blend_alpha: float = 0.5,
+    ):
+        self.k_img = int(k_img)
+        self.anchor_num_frames = int(anchor_num_frames)
+        self.anchor_steps = int(anchor_steps)
+        self.blend_alpha = float(blend_alpha)
+
+    @property
+    def estimated_cost(self) -> CostEstimate:
+        # Crude estimate: anchor_num_frames is much smaller than full video,
+        # so wall-clock scales roughly with k_img (we abort after step k_img).
+        return CostEstimate(wall_clock_s=self.k_img * 1.2, gpu_seconds=self.k_img * 1.2)
+
+    def apply(self, state: TrajectoryState, ctx: ApplyContext) -> ActionResult:
+        from ttsd.pipeline.core import StepDirective, StepState
+        from ttsd.pipeline.model_adapter import GenerationRequest
+
+        captured: dict[str, torch.Tensor] = {}
+
+        def _capture(s: StepState) -> StepDirective | None:
+            if s.step == self.k_img and s.posterior_mean is not None:
+                captured["pm"] = s.posterior_mean.detach().clone()
+                # Abort the side-rollout — we have what we need.
+                return StepDirective(abort=True)
+            return None
+
+        # Reuse the orchestrator's main video resolution so the broadcast
+        # latent shape will be compatible with the next trial's generation.
+        # (Width and height come from the original request, threaded via
+        # state.metadata if the strategy stashed them; else fall back to Wan
+        # 480p defaults.)
+        height = state.metadata.get("height", 480)
+        width = state.metadata.get("width", 832)
+        anchor_seed = state.seed + 9999
+
+        side_request = GenerationRequest(
+            prompt=ctx.prompt,
+            seed=anchor_seed,
+            num_frames=self.anchor_num_frames,
+            height=height,
+            width=width,
+            num_inference_steps=self.anchor_steps,
+            guidance_scale=5.0,
+        )
+        side_out = ctx.adapter.generate(side_request, on_step=_capture, capture={"posterior_mean"})
+        if "pm" not in captured:
+            return ActionResult(
+                status="skip",
+                reason="anchor side-rollout did not capture posterior_mean",
+            )
+
+        anchor = captured["pm"]    # shape (1, C, F_lat_anchor, H_lat, W_lat)
+        # Broadcast across the temporal axis: collapse to (1, C, 1, H, W),
+        # then we leave the final tile-up to the strategy / model adapter
+        # (which knows the next trial's full latent shape).
+        broadcast = anchor.mean(dim=2, keepdim=True)
+
+        return ActionResult(
+            status="continue",
+            cost_spent=CostEstimate(wall_clock_s=self.k_img * 1.2, gpu_seconds=self.k_img * 1.2),
+            reason=f"anchor captured at step {self.k_img}, alpha={self.blend_alpha}",
+            metadata={
+                "overrides": {
+                    "_anchor_broadcast_latent": broadcast,
+                    "_anchor_blend_alpha": self.blend_alpha,
+                    "seed_offset": 1,    # next trial uses a fresh seed too
+                },
+            },
+        )
+
+
+# ── EFD&I Trial 2 ─────────────────────────────────────────────────────────────
+
+@register_action("refine_prompt_vlm")
+class RefinePromptVLM(Action):
+    """EFD&I Trial 2 — invoke a VLM with the original prompt (and optionally
+    the failed video preview) to produce a refined, intent-preserving prompt.
+    The refined prompt overrides the trial's prompt.
+
+    The VLM client is pluggable via `vlm: {kind: '...', params: {...}}`.
+    Default `kind: noop` returns the original prompt unchanged (verifies
+    plumbing without any API call). `kind: quality_modifier_stub` appends
+    common quality boosters (still no network). A real client (Anthropic /
+    OpenAI / local LLaVA) can be registered later via `@register_vlm_client`.
+
+    v1 does NOT pass the decoded video preview to the VLM — text-only
+    refinement. The frames-aware path lands when we wire decoded-preview
+    capture in P4 or beyond.
+    """
+
+    def __init__(self, vlm: dict | None = None):
+        from ttsd.pipeline.vlm import build_vlm_client
+        self._client = build_vlm_client(vlm or {"kind": "noop"})
+
+    def apply(self, state: TrajectoryState, ctx: ApplyContext) -> ActionResult:
+        refined = self._client.refine_prompt(ctx.prompt, frames=None)
+        if refined == ctx.prompt:
+            reason = "vlm returned unchanged prompt (likely NoOp)"
+        else:
+            reason = "prompt refined by VLM"
+        return ActionResult(
+            status="continue",
+            reason=reason,
+            metadata={"overrides": {"prompt": refined}},
+        )

@@ -27,14 +27,8 @@ class Orchestrator:
     """Owns config → instantiate plugins → drive strategy."""
 
     def __init__(self, config: PipelineConfig):
-        # Importing the registration-side modules registers their plugins.
-        # Done here at construction so config kinds can be looked up below.
-        import ttsd.pipeline.actions    # noqa: F401  registers continue/noop/stop_and_fail/stop_and_accept
-        import ttsd.pipeline.policy     # noqa: F401  registers noop, fixed_threshold
-        import ttsd.search.sequential   # noqa: F401  registers sequential_trial
-        import ttsd.verifiers.noop      # noqa: F401  registers noop verifier
-        import ttsd.verifiers.dino.online_adapter   # noqa: F401  registers dino_frame_cos_mean_online
-
+        # All built-in plugins are registered at `import ttsd.pipeline` time
+        # (see ttsd/pipeline/__init__.py). No need to re-import here.
         self.config = config
         self.adapter = MODELS.get(config.model.kind)(**config.model.params)
         self.verifier = VERIFIERS.get(config.verifier.kind)(**config.verifier.params)

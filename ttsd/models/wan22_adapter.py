@@ -266,11 +266,17 @@ class Wan22Adapter:
         guidance_scale: float = 5.0,
         snapshot_steps: Iterable[int] = (),
         on_step_end: Callable | None = None,
+        initial_latent: torch.Tensor | None = None,
     ) -> GenerationOutput:
         """Run one T2V generation. `snapshot_steps` are step indices whose latents
         we keep in CPU memory; `on_step_end` (if provided) is called after every
         step with (pipeline, step_idx, timestep, callback_kwargs) — letting
-        search policies replace/branch the latent in-place."""
+        search policies replace/branch the latent in-place.
+
+        `initial_latent` (optional) replaces the pipeline's default random noise
+        starting point. Used by Trial 1 anchor injection (EFD&I). Shape must
+        match what `WanPipeline` expects for the requested `(num_frames, height,
+        width)`. Caller is responsible for placing it on the right device/dtype."""
         self._load()
         snapshot_set = set(snapshot_steps)
         captured: dict[int, torch.Tensor] = {}
@@ -284,7 +290,7 @@ class Wan22Adapter:
             return callback_kwargs
 
         gen = torch.Generator(device=self.device).manual_seed(seed)
-        result = self._pipe(
+        pipe_kwargs: dict = dict(
             prompt=prompt,
             num_frames=num_frames,
             height=height,
@@ -295,6 +301,10 @@ class Wan22Adapter:
             callback_on_step_end=_cb,
             callback_on_step_end_tensor_inputs=["latents"],
         )
+        if initial_latent is not None:
+            pipe_kwargs["latents"] = initial_latent.to(self.device, dtype=self.dtype)
+
+        result = self._pipe(**pipe_kwargs)
 
         # `result.frames` is typically (B, T, H, W, 3) for video pipelines.
         frames = result.frames[0] if hasattr(result, "frames") else result[0]

@@ -156,6 +156,7 @@ class WanModelAdapter:
                 num_inference_steps=request.num_inference_steps,
                 guidance_scale=request.guidance_scale,
                 on_step_end=_cb,
+                initial_latent=request.initial_latent,
             )
         except AbortTrajectory:
             # The pipeline raised inside the diffusers callback. Return a
