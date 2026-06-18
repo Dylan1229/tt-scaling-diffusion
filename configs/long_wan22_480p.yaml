@@ -1,0 +1,34 @@
+# Long-video baseline for VBench-Long.
+# Same prompt/seed set as the original Phase 0 dev run:
+#   15 prompts x seeds 0-9 = 150 long videos.
+
+model:
+  name: wan22_ti2v_5b
+  path: /data/datasets/fanjiang/.cache/huggingface/hub/models--Wan-AI--Wan2.2-TI2V-5B-Diffusers
+  dtype: bf16
+  device: cuda
+  scheduler: unipc
+
+generation:
+  resolution: [480, 832]
+  chunk_num_frames: 81
+  num_chunks: 6
+  overlap_frames: 1
+  fps: 16
+  num_inference_steps: 50
+  guidance_scale: 5.0
+  chunk_seed_stride: 1000000
+
+prompts:
+  source: ttsd.prompts.dev_set:DEV_PROMPTS
+
+seeds:
+  count: 10
+  base: 0
+
+output:
+  root: runs/baseline_long
+  run_id: null
+  save_video: true
+  save_chunks: false
+  save_meta: true
