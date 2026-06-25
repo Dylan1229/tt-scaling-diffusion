@@ -1,4 +1,4 @@
-# Long-video baseline for VBench-Long.
+# Direct 30s Wan T2V baseline for VBench-Long.
 # Same prompt/seed set as the original Phase 0 dev run:
 #   15 prompts x seeds 0-9 = 150 long videos.
 
@@ -10,7 +10,7 @@ model:
   scheduler: unipc
 
 generation:
-  mode: independent_t2v_chunks
+  mode: direct_t2v
   resolution: [480, 832]
   target_num_frames: 481
   chunk_num_frames: 81

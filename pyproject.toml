@@ -25,8 +25,12 @@ dependencies = [
 eval = [
   # VBench is installed editable from external/VBench — see README. Do NOT
   # add `vbench` here; it would shadow the editable clone.
+  "av==14.0.1",
+  "dreamsim==0.2.1",
   "open_clip_torch",
   "decord",
+  "scenedetect==0.6.5.2",
+  "setuptools<81",
   "torchmetrics",
 ]
 dev = [

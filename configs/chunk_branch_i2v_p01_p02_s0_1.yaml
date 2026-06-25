@@ -1,6 +1,5 @@
-# Long-video baseline for VBench-Long.
-# Same prompt/seed set as the original Phase 0 dev run:
-#   15 prompts x seeds 0-9 = 150 long videos.
+# Binary chunk-branch I2V pilot for test-time scaling.
+# Fixed roots: p01,p02 x root seeds 0,1. Chunk 0 is fixed; chunks 1-5 branch.
 
 model:
   name: wan22_ti2v_5b
@@ -10,7 +9,7 @@ model:
   scheduler: unipc
 
 generation:
-  mode: independent_t2v_chunks
+  mode: last_frame_i2v_chunks
   resolution: [480, 832]
   target_num_frames: 481
   chunk_num_frames: 81
@@ -21,16 +20,16 @@ generation:
   guidance_scale: 5.0
   chunk_seed_stride: 1000000
 
+branch:
+  prompt_ids: [p01, p02]
+  root_seeds: [0, 1]
+  branch_factor: 2
+  branch_chunks: [1, 2, 3, 4, 5]
+  seed_index_stride: 1000
+
 prompts:
   source: ttsd.prompts.dev_set:DEV_PROMPTS
-
-seeds:
-  count: 10
-  base: 0
 
 output:
   root: runs/baseline_long
   run_id: null
-  save_video: true
-  save_chunks: false
-  save_meta: true

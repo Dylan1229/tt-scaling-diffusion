@@ -33,6 +33,15 @@ if [ -f "$SETUP" ] && grep -q "^check_torch_version()" "$SETUP"; then
   sed -i 's/^check_torch_version()/# check_torch_version()  # patched: works on cu128/' "$SETUP"
 fi
 
+# VBench-Long imports moviepy.editor only for an unused VideoFileClip symbol.
+# moviepy 1.x forces decorator<5, which conflicts with the repo's dev stack,
+# and moviepy 2.x does not provide moviepy.editor. Patch out the unused import.
+LONG_UTILS="$EXT/VBench/vbench2_beta_long/utils.py"
+if [ -f "$LONG_UTILS" ] && grep -q "^from moviepy.editor import VideoFileClip" "$LONG_UTILS"; then
+  echo "[setup_external] PATCH $LONG_UTILS — remove unused moviepy import"
+  sed -i 's/^from moviepy.editor import VideoFileClip/# from moviepy.editor import VideoFileClip  # patched: unused, avoids moviepy dependency/' "$LONG_UTILS"
+fi
+
 cat <<EOF
 
 [setup_external] done.

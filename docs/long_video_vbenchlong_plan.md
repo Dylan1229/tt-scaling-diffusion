@@ -42,13 +42,43 @@ Default stitching:
   - `dynamic_degree`
   - `aesthetic_quality`
   - `imaging_quality`
-- Stage one seed at a time to preserve prompt filenames exactly for VBench-Long:
-  - `_staging/<dimension>/seed0000/<prompt_text>.mp4`
+- Stage one seed at a time while preserving the exact generation prompt in metadata:
+  - `_staging/seed0000/<prompt_text>-0.mp4`
+  - The `-0` suffix matches VBench-Long's sample naming convention and lets it reuse
+    the same `split_clip/` outputs across dimensions.
+  - Aggregation maps VBench-Long result paths back to the original
+    `(prompt_id, prompt_text, seed)` from `meta.json`.
   - Run VBench-Long.
   - Aggregate results back to `(prompt_id, prompt_text, seed, dimension)`.
 
+## Runtime Estimate
+
+Assumptions:
+
+- Previous 81-frame Wan2.2 generations took about 55-60 seconds per clip per GPU.
+- A 30s long video is 6 independently generated 81-frame chunks.
+- Full setting is 150 long videos: 15 prompts x seeds 0-9.
+- GPUs 4-7 are available, so generation runs as 4 shards.
+
+Estimate:
+
+- Generation work: `150 videos x 6 chunks = 900` normal 81-frame generations.
+- Generation wall time on 4 GPUs: about 4.5-5.5 hours.
+- VBench-Long scoring for the six custom-input dimensions: about 1.5-4 hours,
+  depending on model/checkpoint cache state and metric throughput.
+- End-to-end wall time: likely 6-10 hours.
+
+First-run checkpoint downloads or a busy filesystem can push this higher.
+
 ## Test Plan
 
+- Environment:
+  - Verify `python -c "import vbench2_beta_long"` succeeds.
+  - VBench-Long needs `av==14.0.1`, `dreamsim==0.2.1`, and
+    `scenedetect==0.6.5.2` in addition to the editable `external/VBench`
+    install.
+  - `scripts/setup_external.sh` patches out VBench-Long's unused
+    `moviepy.editor` import to avoid a dependency conflict with the dev stack.
 - Smoke generation:
   - Run one prompt x one seed with `num_chunks=2`.
   - Verify `video.mp4` has `161` frames and valid `meta.json`.
