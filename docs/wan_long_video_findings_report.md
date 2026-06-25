@@ -48,19 +48,21 @@ We then tested all 15 prompts with root seeds 0 and 1, giving 30 prompt/seed roo
 
 This confirms the important point: **without search, T2V + I2V does not beat independent concat on average**. The default path and average random branch are both worse than independent. However, **search over continuation paths changes the result**: best-of-32 beats independent concat by `+0.0261` overall and wins on 24/30 prompt/seed roots.
 
-Metric-level best-of-32 deltas:
+The clearest view is the searched distribution. For each prompt/seed root and each metric, we have 32 complete I2V continuation paths. The table below averages the worst path, mean path, and best path across the 30 roots.
 
-| Metric | Independent | Best-of-32 | Delta |
-|---|---:|---:|---:|
-| overall_mean | 0.752206 | 0.778274 | +0.026068 |
-| subject_consistency | 0.917340 | 0.962048 | +0.044707 |
-| background_consistency | 0.941914 | 0.956866 | +0.014952 |
-| motion_smoothness | 0.964316 | 0.971070 | +0.006755 |
-| dynamic_degree | 0.587500 | 0.687500 | +0.100000 |
-| aesthetic_quality | 0.483186 | 0.471366 | -0.011820 |
-| imaging_quality | 0.618983 | 0.620795 | +0.001812 |
+| Metric | Independent | Search min | Search mean | Search max | Mean delta | Max delta |
+|---|---:|---:|---:|---:|---:|---:|
+| overall_mean | 0.752206 | 0.707818 | 0.741002 | 0.778274 | -0.011204 | +0.026068 |
+| subject_consistency | 0.917340 | 0.943367 | 0.961601 | 0.972639 | +0.044261 | +0.055299 |
+| background_consistency | 0.941914 | 0.950216 | 0.957438 | 0.962843 | +0.015524 | +0.020929 |
+| motion_smoothness | 0.964316 | 0.958046 | 0.972931 | 0.980230 | +0.008615 | +0.015914 |
+| dynamic_degree | 0.587500 | 0.335417 | 0.495247 | 0.695833 | -0.092253 | +0.108333 |
+| aesthetic_quality | 0.483186 | 0.420958 | 0.459473 | 0.498473 | -0.023714 | +0.015286 |
+| imaging_quality | 0.618983 | 0.516772 | 0.599323 | 0.664446 | -0.019660 | +0.045463 |
 
-The search gain is mainly from recovering dynamic degree while retaining the consistency benefits of I2V. This supports the hypothesis that I2V continuation has high variance: many paths are weak, but some paths preserve continuity and still produce enough motion. Selecting among branches avoids committing to a poor continuation trajectory.
+This table shows why random I2V is not enough. The mean path is below independent overall, and is especially worse on dynamic degree, aesthetic quality, and imaging quality. But the best path recovers or improves every listed metric, including a large `+0.1083` gain on dynamic degree and a `+0.0455` gain on imaging quality. The main exception is when selecting a **single path by overall score** rather than an oracle per-metric path: that overall-best path still improves overall but remains slightly worse on aesthetic quality (`-0.0118`).
+
+The search gain is mainly from recovering dynamic degree and imaging quality while retaining the consistency benefits of I2V. This supports the hypothesis that I2V continuation has high variance: many paths are weak, but some paths preserve continuity and still produce enough motion and detail. Selecting among branches avoids committing to a poor continuation trajectory.
 
 ## Interpretation
 
