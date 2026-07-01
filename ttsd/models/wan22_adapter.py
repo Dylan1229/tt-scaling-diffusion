@@ -11,7 +11,10 @@ import os
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 
+import numpy as np
 import torch
+
+from ttsd.models.microsteps import MicrostepSchedule
 
 DEFAULT_MODEL_PATH = (
     "/data/datasets/fanjiang/.cache/huggingface/hub/"
@@ -147,6 +150,30 @@ class Wan22Adapter:
     def _capture_tensor(tensor: torch.Tensor) -> torch.Tensor:
         return tensor.detach().to("cpu", dtype=torch.float16).clone()
 
+    @staticmethod
+    def _install_microstep_schedule(pipe, schedule: MicrostepSchedule | None):
+        if schedule is None:
+            return None
+
+        original_set_timesteps = pipe.scheduler.set_timesteps
+        sigmas = np.asarray(schedule.sigmas, dtype=np.float32)
+
+        def wrapped_set_timesteps(num_inference_steps=None, *args, **kwargs):
+            device = kwargs.pop("device", None)
+            if args and device is None:
+                device = args[0]
+            kwargs.pop("sigmas", None)
+            kwargs.pop("timesteps", None)
+            return original_set_timesteps(
+                num_inference_steps=len(sigmas),
+                device=device,
+                sigmas=sigmas,
+                **kwargs,
+            )
+
+        pipe.scheduler.set_timesteps = wrapped_set_timesteps
+        return original_set_timesteps
+
     @torch.no_grad()
     def generate_with_posterior_means(
         self,
@@ -161,6 +188,7 @@ class Wan22Adapter:
         posterior_mean_steps: Iterable[int] = (),
         raw_latent_steps: Iterable[int] = (),
         model_output_steps: Iterable[int] = (),
+        microstep_schedule: MicrostepSchedule | None = None,
     ) -> GenerationOutput:
         """Run one T2V generation and additionally capture UniPC x0 predictions.
 
@@ -229,6 +257,7 @@ class Wan22Adapter:
             step_idx += 1
             return result
 
+        original_set_timesteps = self._install_microstep_schedule(pipe, microstep_schedule)
         pipe.scheduler.step = wrapped_step
         try:
             generator = torch.Generator(device=self.device).manual_seed(seed)
@@ -237,14 +266,22 @@ class Wan22Adapter:
                 num_frames=num_frames,
                 height=height,
                 width=width,
-                num_inference_steps=num_inference_steps,
+                num_inference_steps=(
+                    microstep_schedule.effective_num_steps
+                    if microstep_schedule is not None
+                    else num_inference_steps
+                ),
                 guidance_scale=guidance_scale,
                 generator=generator,
             )
         finally:
             pipe.scheduler.step = original_step
+            if original_set_timesteps is not None:
+                pipe.scheduler.set_timesteps = original_set_timesteps
 
         frames = result.frames[0] if hasattr(result, "frames") else result[0]
+        if microstep_schedule is not None:
+            scheduler_meta["microstep_schedule"] = microstep_schedule.to_dict()
 
         return GenerationOutput(
             frames=frames,
@@ -266,6 +303,7 @@ class Wan22Adapter:
         guidance_scale: float = 5.0,
         snapshot_steps: Iterable[int] = (),
         on_step_end: Callable | None = None,
+        microstep_schedule: MicrostepSchedule | None = None,
     ) -> GenerationOutput:
         """Run one T2V generation. `snapshot_steps` are step indices whose latents
         we keep in CPU memory; `on_step_end` (if provided) is called after every
@@ -283,19 +321,31 @@ class Wan22Adapter:
                 callback_kwargs = on_step_end(pipe, step_idx, timestep, callback_kwargs)
             return callback_kwargs
 
-        gen = torch.Generator(device=self.device).manual_seed(seed)
-        result = self._pipe(
-            prompt=prompt,
-            num_frames=num_frames,
-            height=height,
-            width=width,
-            num_inference_steps=num_inference_steps,
-            guidance_scale=guidance_scale,
-            generator=gen,
-            callback_on_step_end=_cb,
-            callback_on_step_end_tensor_inputs=["latents"],
-        )
+        original_set_timesteps = self._install_microstep_schedule(self._pipe, microstep_schedule)
+        try:
+            gen = torch.Generator(device=self.device).manual_seed(seed)
+            result = self._pipe(
+                prompt=prompt,
+                num_frames=num_frames,
+                height=height,
+                width=width,
+                num_inference_steps=(
+                    microstep_schedule.effective_num_steps
+                    if microstep_schedule is not None
+                    else num_inference_steps
+                ),
+                guidance_scale=guidance_scale,
+                generator=gen,
+                callback_on_step_end=_cb,
+                callback_on_step_end_tensor_inputs=["latents"],
+            )
+        finally:
+            if original_set_timesteps is not None:
+                self._pipe.scheduler.set_timesteps = original_set_timesteps
 
         # `result.frames` is typically (B, T, H, W, 3) for video pipelines.
         frames = result.frames[0] if hasattr(result, "frames") else result[0]
-        return GenerationOutput(frames=frames, latents_by_step=captured)
+        scheduler_meta = {}
+        if microstep_schedule is not None:
+            scheduler_meta["microstep_schedule"] = microstep_schedule.to_dict()
+        return GenerationOutput(frames=frames, latents_by_step=captured, scheduler_meta=scheduler_meta)

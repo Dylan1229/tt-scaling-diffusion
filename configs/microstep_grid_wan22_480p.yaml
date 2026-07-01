@@ -1,0 +1,55 @@
+# Local microstep intervention grid for Wan 2.2.
+# Goal: test whether spending extra denoising compute around selected base
+# steps improves VBench dimensions or the aggregate score.
+
+model:
+  name: wan22_ti2v_5b
+  path: /data/datasets/fanjiang/.cache/huggingface/hub/models--Wan-AI--Wan2.2-TI2V-5B-Diffusers
+  dtype: bf16
+  device: cuda
+  scheduler: unipc
+
+generation:
+  resolution: [480, 832]
+  num_frames: 81
+  num_inference_steps: 50
+  guidance_scale: 5.0
+
+prompts:
+  source: ttsd.prompts.dev_set:DEV_PROMPTS
+
+seeds:
+  # Keep this small for the first pass; use --seed-idxs or --limit-seeds to
+  # control the exact trajectories being sampled.
+  count: 3
+  base: 0
+
+microstep_grid:
+  # Human-facing step numbers: 40 means the interval starting at denoising
+  # model call 40. Set to 0 for Python-style step indices.
+  index_base: 1
+  num_train_timesteps: 1000
+  include_baseline: true
+
+  # Expands to singles and pairwise combinations:
+  #   s40x05, s40x10, ...
+  #   s40x05_s10x05, s40x05_s10x10, ...
+  anchors: [40, 30, 20, 10]
+  extra_steps: [5, 10]
+  min_active_anchors: 1
+  max_active_anchors: 2
+
+  # Add hand-picked variants here if we want to promote a narrower follow-up
+  # sweep without changing the automatic grid above.
+  variants: []
+
+snapshots:
+  every_n_steps: 5
+  also_keep: [1, 49]
+
+output:
+  root: runs/microstep_grid
+  run_id: null
+  save_video: true
+  save_latents: false
+  save_meta: true
