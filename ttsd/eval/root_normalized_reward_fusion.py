@@ -38,6 +38,24 @@ DEFAULT_FORMULAS: dict[str, dict[str, float]] = {
         "openclip_min": 0.25,
         "vr8_mq": -0.25,
     },
+    "root_norm_clipiqa_ta_openclip_mq_temporal": {
+        "clipiqa_mean": 1.0,
+        "vr8_ta": 1.25,
+        "openclip_min": 0.5,
+        "vr8_mq": -0.25,
+        "clip_img_adj_mean": 0.25,
+        "pixel_diff_mean": 0.25,
+    },
+    "root_norm_fast_beam_video_quality": {
+        "clipiqa_mean": 0.875,
+        "vr8_ta": 1.0,
+        "vr8_mq": -0.75,
+        "clip_img_adj_min": 0.375,
+        "clip_img_all_min": 0.75,
+        "pixel_diff_mean": 0.75,
+        "nima_koniq_score_mean": 0.5,
+        "niqe_score_mean": 0.25,
+    },
 }
 
 VBENCH_DIMS = (
@@ -127,21 +145,60 @@ def _load_features(compare_dir: Path) -> dict[tuple[str, int, str], dict[str, fl
             features[key]["openclip_min"] = float(row["clip_min"])
             features[key]["openclip_mean"] = float(row["clip_mean"])
 
+    dover_path = frozen_dir / "dover_mobile" / "dover_mobile_scores.csv"
+    if dover_path.exists():
+        for row in _read_csv(dover_path):
+            key = _feature_key(row)
+            features[key]["dover_technical"] = float(row["dover_technical"])
+            features[key]["dover_aesthetic"] = float(row["dover_aesthetic"])
+            features[key]["dover_fused"] = float(row["dover_fused"])
+
+    temporal_path = frozen_dir / "temporal_clip" / "temporal_clip_scores.csv"
+    temporal_features = (
+        "clip_img_adj_mean",
+        "clip_img_adj_min",
+        "clip_img_first_last",
+        "clip_img_all_mean",
+        "clip_img_all_min",
+        "clip_img_adj_std",
+        "pixel_diff_mean",
+        "pixel_diff_std",
+        "pixel_diff_min",
+        "pixel_diff_max",
+    )
+    if temporal_path.exists():
+        for row in _read_csv(temporal_path):
+            key = _feature_key(row)
+            for feature in temporal_features:
+                if feature in row and row[feature] != "":
+                    features[key][feature] = float(row[feature])
+
     sweep_files = {
-        "clipiqaplus": "clipiqaplus_scores.csv",
-        "clipiqaplus_rn": "clipiqaplus_rn50_512_scores.csv",
-        "liqe": "liqe_scores.csv",
-        "liqe_mix": "liqe_mix_scores.csv",
-        "topiq": "topiq_nr_scores.csv",
-        "dbcnn": "dbcnn_scores.csv",
-        "hyperiqa": "hyperiqa_scores.csv",
-        "nima": "nima_scores.csv",
-        "nima_koniq": "nima_koniq_scores.csv",
-        "paq2piq": "paq2piq_scores.csv",
-        "brisque": "brisque_scores.csv",
-        "niqe": "niqe_scores.csv",
+        "clipiqaplus": ("clipiqaplus_scores.csv", "clipiqaplus"),
+        "clipiqaplus_rn": ("clipiqaplus_rn50_512_scores.csv", "clipiqaplus_rn50_512"),
+        "liqe": ("liqe_scores.csv", "liqe"),
+        "liqe_mix": ("liqe_mix_scores.csv", "liqe_mix"),
+        "topiq": ("topiq_nr_scores.csv", "topiq_nr"),
+        "dbcnn": ("dbcnn_scores.csv", "dbcnn"),
+        "hyperiqa": ("hyperiqa_scores.csv", "hyperiqa"),
+        "nima": ("nima_scores.csv", "nima"),
+        "nima_koniq": ("nima_koniq_scores.csv", "nima_koniq"),
+        "paq2piq": ("paq2piq_scores.csv", "paq2piq"),
+        "brisque": ("brisque_scores.csv", "brisque"),
+        "niqe": ("niqe_scores.csv", "niqe"),
     }
-    for prefix, filename in sweep_files.items():
+    score_fields = (
+        "score_mean",
+        "score_min",
+        "score_max",
+        "score_std",
+        "score_mean_minus_std",
+        "score_mean_plus_std",
+        "select_mean",
+        "select_min",
+        "select_robust",
+    )
+    for prefix, (filename, raw_prefix) in sweep_files.items():
         path = pyiqa_dir / filename
         if not path.exists():
             continue
@@ -150,6 +207,10 @@ def _load_features(compare_dir: Path) -> dict[tuple[str, int, str], dict[str, fl
             features[key][f"{prefix}_mean"] = float(row["select_mean"])
             features[key][f"{prefix}_min"] = float(row["select_min"])
             features[key][f"{prefix}_robust"] = float(row["select_robust"])
+            for field in score_fields:
+                if field not in row or row[field] == "":
+                    continue
+                features[key][f"{raw_prefix}_{field}"] = float(row[field])
 
     return features
 
