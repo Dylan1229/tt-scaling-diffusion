@@ -46,6 +46,22 @@ DEFAULT_FORMULAS: dict[str, dict[str, float]] = {
         "clip_img_adj_mean": 0.25,
         "pixel_diff_mean": 0.25,
     },
+    "root_norm_clean_quality_alignment_temporal": {
+        "clipiqa_mean": 1.0,
+        "vr8_ta": 0.75,
+        "openclip_min": 0.5,
+        "clip_img_adj_mean": 0.25,
+        "pixel_diff_mean": 0.25,
+        "nima_koniq_score_mean": 0.25,
+    },
+    "root_norm_positive_beam_no_mq": {
+        "clipiqa_max": 0.125,
+        "vr8_ta": 0.25,
+        "openclip_min": 0.125,
+        "clipiqaplus_score_mean": 0.375,
+        "pixel_diff_mean": 0.375,
+        "pixel_diff_min": 0.25,
+    },
     "root_norm_fast_beam_video_quality": {
         "clipiqa_mean": 0.875,
         "vr8_ta": 1.0,
@@ -128,7 +144,16 @@ def _load_features(compare_dir: Path) -> dict[tuple[str, int, str], dict[str, fl
     clipiqa_path = frozen_dir / "clipiqa_scores.csv"
     if clipiqa_path.exists():
         for row in _read_csv(clipiqa_path):
-            features[_feature_key(row)]["clipiqa_mean"] = float(row["clipiqa_mean"])
+            key = _feature_key(row)
+            for feature in (
+                "clipiqa_mean",
+                "clipiqa_min",
+                "clipiqa_max",
+                "clipiqa_std",
+                "clipiqa_mean_minus_std",
+            ):
+                if feature in row and row[feature] != "":
+                    features[key][feature] = float(row[feature])
 
     videoreward_path = frozen_dir / "video_reward_scores.csv"
     if videoreward_path.exists():
