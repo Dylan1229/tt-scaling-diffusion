@@ -1,0 +1,55 @@
+# Wan 2.2 DLBS smoke/full-run config.
+
+model:
+  name: wan22_ti2v_5b_dlbs
+  path: /data/datasets/fanjiang/.cache/huggingface/hub/models--Wan-AI--Wan2.2-TI2V-5B-Diffusers
+  dtype: bf16
+  device: cuda
+  # Use a stochastic first-order scheduler so branch candidates are produced by
+  # scheduler noise, matching DLBS's "different noise draws" setup.
+  scheduler: euler_sde
+
+generation:
+  resolution: [480, 832]
+  num_frames: 81
+  num_inference_steps: 50
+  guidance_scale: 5.0
+
+dlbs:
+  num_beams: 4
+  num_candidates: 2
+  num_lookahead_steps: 6
+  # For euler_sde this can stay 0 because scheduler.step already branches with
+  # random SDE noise. Set >0 for deterministic schedulers such as unipc/euler.
+  branch_noise_scale: 0.0
+  branch_noise_std: null
+  include_deterministic_candidate: false
+  reward_frame_stride: 2
+  reward_max_frames: 16
+
+reward:
+  # [subject_consistency, motion_smoothness, dynamic_degree, aesthetic, overall_consistency]
+  # This mirrors the Wan movie setting from T2V-Diffusion-Search.
+  weights: [0.0, 0.0, 0.0, 0.25, 1.0]
+  device: cuda
+  t2v_search_root: /data/datasets/peihao/T2V-Diffusion-Search
+  vbench_root: null
+  pretrained_root: null
+
+prompts:
+  source: ttsd.prompts.dev_set:DEV_PROMPTS
+
+seeds:
+  count: 1
+  base: 0
+
+snapshots:
+  every_n_steps: 5
+  also_keep: [1, 49]
+
+output:
+  root: runs/dlbs
+  run_id: null
+  output_type: np
+  save_video: true
+  save_latents: true

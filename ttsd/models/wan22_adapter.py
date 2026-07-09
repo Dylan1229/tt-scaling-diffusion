@@ -94,6 +94,7 @@ class GenerationOutput:
     raw_latents_by_step: dict[int, torch.Tensor] = field(default_factory=dict)
     model_outputs_by_step: dict[int, torch.Tensor] = field(default_factory=dict)
     scheduler_meta: dict = field(default_factory=dict)
+    search_trace: list[dict] = field(default_factory=list)
 
 
 class Wan22Adapter:
@@ -299,3 +300,53 @@ class Wan22Adapter:
         # `result.frames` is typically (B, T, H, W, 3) for video pipelines.
         frames = result.frames[0] if hasattr(result, "frames") else result[0]
         return GenerationOutput(frames=frames, latents_by_step=captured)
+
+    @torch.no_grad()
+    def generate_with_dlbs(
+        self,
+        prompt: str,
+        seed: int,
+        reward_model,
+        num_frames: int = 81,
+        height: int = 480,
+        width: int = 832,
+        num_inference_steps: int = 50,
+        guidance_scale: float = 5.0,
+        negative_prompt: str | None = None,
+        guidance_scale_2: float | None = None,
+        snapshot_steps: Iterable[int] = (),
+        dlbs_config=None,
+    ) -> GenerationOutput:
+        """Run Wan with DLBS branch/lookahead/preview scoring.
+
+        This follows the T2V-Diffusion-Search loop: keep beams, create stochastic
+        candidates at each step, coarse-preview each candidate to x0, decode that
+        preview, score it with a video reward model, and keep top beams.
+        """
+        self._load()
+        from ttsd.models.wan22_dlbs import generate_wan22_dlbs
+
+        gen = torch.Generator(device=self.device).manual_seed(seed)
+        output = generate_wan22_dlbs(
+            self._pipe,
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            seed=seed,
+            reward_model=reward_model,
+            height=height,
+            width=width,
+            num_frames=num_frames,
+            num_inference_steps=num_inference_steps,
+            guidance_scale=guidance_scale,
+            guidance_scale_2=guidance_scale_2,
+            generator=gen,
+            snapshot_steps=set(snapshot_steps),
+            config=dlbs_config,
+        )
+
+        frames = output.frames[0] if isinstance(output.frames, (list, tuple)) else output.frames
+        return GenerationOutput(
+            frames=frames,
+            latents_by_step=output.latents_by_step,
+            search_trace=output.trace,
+        )
