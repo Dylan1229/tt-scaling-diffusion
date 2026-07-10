@@ -4,13 +4,14 @@ Phase 0 produces `runs/baseline/<run_id>/<prompt_id>/seed<NNNN>/video.mp4`.
 This module:
 
   1. Stages videos into a VBench-friendly directory (one flat dir per
-     dimension, with files named `<prompt_text>-<seed_idx>.mp4` — VBench's
-     custom_input mode keys on the filename stem).
+     dimension, with files named `<prompt_text>-<seed_idx>.mp4`).
   2. Calls VBench dimension-by-dimension (each dimension owns its own
-     submodel: ViCLIP, RAFT, DINO, etc.).
-  3. Aggregates per-(prompt, seed, dim) scores into a long-format CSV plus a
-     wide summary CSV with per-prompt mean/std across seeds — the headline
-     "TTS-necessity" artifact.
+     submodel: ViCLIP, RAFT, DINO, etc.), passing an explicit prompt map so
+     VBench never has to recover the prompt from the filename.
+  3. Aggregates per-(prompt, seed, dim) scores into a long-format CSV, a wide
+     summary CSV with per-prompt mean/std across seeds, and `vbench_targets.csv`
+     — one row per clip carrying the three per-video targets (`vbench_quality`,
+     `dynamic_degree`, `overall_consistency`) alongside every input to them.
 
 VBench downloads ~10–20 GB of pretrained checkpoints on first use. Set
 `HF_HOME=/data/datasets/fanjiang/.cache/huggingface` to keep them off /home.
@@ -58,10 +59,71 @@ ALL_VIDEO_DIMENSIONS: tuple[str, ...] = (
     "subject_consistency",
     "background_consistency",
     "motion_smoothness",
+    "dynamic_degree",
     "aesthetic_quality",
     "imaging_quality",
     "overall_consistency",
 )
+
+# VBench's own (Min, Max) normalization bounds for the QUALITY_LIST dimensions we
+# score, copied from external/VBench/scripts/constant.py (NORMALIZE_DIC). That
+# directory has no __init__.py, so it is not importable. Every one of these five
+# carries DIM_WEIGHT 1.0, so `vbench_quality` is a plain mean of the terms.
+#
+# VBench's QUALITY_LIST has two more members. `temporal_flickering` is only
+# meaningful on still-frame prompts. `dynamic_degree` is boolean per video, so
+# folding it in (weight 0.5) would bimodalize a per-video score; it is reported
+# on its own instead.
+QUALITY_NORMALIZE: dict[str, tuple[float, float]] = {
+    "subject_consistency": (0.1462, 1.0),
+    "background_consistency": (0.2615, 1.0),
+    "motion_smoothness": (0.7060, 0.9975),
+    "aesthetic_quality": (0.0, 1.0),
+    "imaging_quality": (0.0, 1.0),
+}
+
+# The six subscores the retired `avg_vbench_z` averaged. Kept only to reproduce it
+# under --legacy-avg-vbench-z.
+LEGACY_Z_SUBSCORES: tuple[str, ...] = (
+    "subject_consistency",
+    "background_consistency",
+    "motion_smoothness",
+    "aesthetic_quality",
+    "imaging_quality",
+    "overall_consistency",
+)
+
+
+def normalized_quality_terms(clip: dict) -> dict[str, float]:
+    """(x - Min) / (Max - Min) for each quality dimension of one video.
+
+    `imaging_quality` is a 0-100 MUSIQ score per video — VBench divides by 100 only
+    when aggregating (vbench/imaging_quality.py:55) — so it is rescaled here, the one
+    place quality is computed. Terms are deliberately left unclamped: a few clips
+    exceed `motion_smoothness`'s Max, and clamping would break the identity below.
+    """
+    terms: dict[str, float] = {}
+    for dim, (lo, hi) in QUALITY_NORMALIZE.items():
+        x = float(clip[dim])
+        if dim == "imaging_quality":
+            x /= 100.0
+        terms[dim] = (x - lo) / (hi - lo)
+    return terms
+
+
+def vbench_quality(clip: dict) -> float:
+    """VBench's Quality score for a single video, over 5 of its 7 quality dimensions.
+
+    The normalization is affine and the weights are all 1.0, so averaging this over any
+    set of videos reproduces exactly what external/VBench/scripts/cal_final_score.py
+    computes for Quality from the dimension averages. It is therefore VBench's Quality
+    decomposed into per-video contributions, not an approximation of it.
+
+    It is never VBench's Total, which additionally needs the Semantic factor — and 8 of
+    those 9 dimensions require prompt-specific `auxiliary_info`.
+    """
+    terms = normalized_quality_terms(clip)
+    return sum(terms.values()) / len(terms)
 
 
 def _slug(prompt: str) -> str:
@@ -123,9 +185,16 @@ def run_vbench_for_dimension(
     staging_dir: Path,
     output_dir: Path,
     device: str = "cuda",
+    prompt_list: dict[str, str] | None = None,
 ) -> dict:
     """Invoke VBench on one dimension's staging dir. Returns the parsed
-    eval-results dict keyed by video filename → score."""
+    eval-results dict keyed by video filename → score.
+
+    `prompt_list` maps a staged filename to its clean prompt text. Without it VBench
+    falls back to `get_prompt_from_filename`, which strips only a trailing `-<digits>`
+    and so leaves our `-seedNNNN` suffix in the prompt fed to ViCLIP. Only the
+    text-conditioned dimensions read it; for the rest it is inert.
+    """
     # Imported lazily — VBench import is heavy and pulls torch/CLIP.
     from vbench import VBench
 
@@ -140,6 +209,7 @@ def run_vbench_for_dimension(
     vb.evaluate(
         videos_path=str(staging_dir),
         name=name,
+        prompt_list=prompt_list or {},
         dimension_list=[dimension],
         mode="custom_input",
     )
@@ -155,19 +225,110 @@ def run_vbench_for_dimension(
     return json.loads(candidates[0].read_text())
 
 
+def _add_legacy_avg_vbench_z(clips: list[dict]) -> None:
+    """DEPRECATED. Per-prompt z-normalized mean of the six subscores.
+
+    Retired as a target because it is identically zero for every prompt by
+    construction — so it cannot compare sampling strategies — and because three of
+    its six terms (subject_consistency, background_consistency, motion_smoothness)
+    all measure frame-to-frame similarity, which it therefore triple-counts.
+
+    Emitted only under --legacy-avg-vbench-z so the existing run can be compared
+    against `vbench_quality`. No analysis or report runner computes it any more.
+    """
+    import statistics
+
+    by_prompt: dict[str, list[dict]] = defaultdict(list)
+    for clip in clips:
+        by_prompt[clip["prompt_id"]].append(clip)
+
+    for group in by_prompt.values():
+        zs: dict[str, list[float]] = {}
+        for metric in LEGACY_Z_SUBSCORES:
+            vals = [float(c[metric]) for c in group]
+            mu = statistics.fmean(vals)
+            sd = statistics.pstdev(vals)
+            zs[metric] = [0.0] * len(vals) if sd == 0 else [(v - mu) / sd for v in vals]
+        for i, clip in enumerate(group):
+            clip["avg_vbench_z"] = statistics.fmean([zs[m][i] for m in LEGACY_Z_SUBSCORES])
+
+
+def pivot_to_clips(long_rows: list[dict]) -> dict[tuple[str, int], dict]:
+    """Collapse the long rows into one dict per clip, keyed by (prompt_id, seed_idx)."""
+    by_clip: dict[tuple[str, int], dict] = {}
+    for row in long_rows:
+        clip = by_clip.setdefault(
+            (row["prompt_id"], row["seed_idx"]),
+            {k: row[k] for k in ("prompt_id", "prompt_text", "seed_idx")},
+        )
+        clip[row["dimension"]] = row["score"]
+    return by_clip
+
+
+def add_quality_to_clips(by_clip: dict[tuple[str, int], dict]) -> bool:
+    """Annotate each clip with its norm_* terms and vbench_quality, in place.
+
+    Returns False (annotating nothing) when a quality dimension was not scored, which
+    is the normal case for a run with a partial `--dimensions` list.
+    """
+    if not by_clip:
+        return False
+    missing = [d for d in QUALITY_NORMALIZE if any(d not in c for c in by_clip.values())]
+    if missing:
+        print(f"[vbench-agg] no vbench_quality: {', '.join(missing)} not scored")
+        return False
+
+    for clip in by_clip.values():
+        clip.update({f"norm_{d}": v for d, v in normalized_quality_terms(clip).items()})
+        clip["vbench_quality"] = vbench_quality(clip)
+    return True
+
+
+def write_targets_csv(
+    by_clip: dict[tuple[str, int], dict], output_dir: Path, legacy_avg_vbench_z: bool = False
+) -> Path:
+    """Write one row per clip: the three per-video targets and every input to them."""
+    cols = ["prompt_id", "prompt_text", "seed_idx"]
+    cols += [*QUALITY_NORMALIZE, "overall_consistency", "dynamic_degree"]
+    cols += [f"norm_{d}" for d in QUALITY_NORMALIZE]
+    cols += ["vbench_quality"]
+
+    if legacy_avg_vbench_z:
+        absent = [m for m in LEGACY_Z_SUBSCORES if any(m not in c for c in by_clip.values())]
+        if absent:
+            print(f"[vbench-agg] skipping avg_vbench_z: no {', '.join(absent)} scores")
+        else:
+            _add_legacy_avg_vbench_z(list(by_clip.values()))
+            cols += ["avg_vbench_z"]
+
+    targets_csv = output_dir / "vbench_targets.csv"
+    with targets_csv.open("w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore", restval="")
+        w.writeheader()
+        w.writerows(clip for _, clip in sorted(by_clip.items()))
+
+    return targets_csv
+
+
 def aggregate_to_csv(
-    run_dir: Path, results_by_dim: dict[str, dict], output_dir: Path
-) -> tuple[Path, Path]:
-    """Write two CSVs:
-      - long-format: one row per (prompt_id, prompt_text, seed, dim, score)
-      - summary: one row per (prompt_id, prompt_text, dim) with mean/std/min/max.
+    run_dir: Path,
+    results_by_dim: dict[str, dict],
+    output_dir: Path,
+    legacy_avg_vbench_z: bool = False,
+) -> tuple[Path, Path, Path | None]:
+    """Write three CSVs:
+      - long: one row per (clip, VBench dimension). Raw VBench outputs only.
+      - summary: one row per (prompt, dimension) with mean/std/min/max across seeds.
+        `dimension` also carries `vbench_quality`, whose across-seed spread is the
+        quantity a test-time-scaling search is trying to exploit.
+      - targets: one row per clip — the three per-video targets and their inputs.
     """
     import statistics
 
     long_rows: list[dict] = []
     summary: dict[tuple[str, str, str], list[float]] = defaultdict(list)
 
-    # Build a (prompt_text → prompt_id, axis) lookup from the run.
+    # Build a prompt_text → prompt_id lookup from the run.
     text_to_meta: dict[str, dict] = {}
     for meta, _ in _iter_clips(run_dir):
         text_to_meta.setdefault(meta["prompt_text"], meta)
@@ -200,7 +361,6 @@ def aggregate_to_csv(
             row = {
                 "prompt_id": meta.get("prompt_id", "?"),
                 "prompt_text": prompt_text,
-                "axis": meta.get("axis", ""),
                 "seed_idx": seed_idx,
                 "dimension": dim,
                 "score": score,
@@ -208,12 +368,20 @@ def aggregate_to_csv(
             long_rows.append(row)
             summary[(row["prompt_id"], prompt_text, dim)].append(score)
 
+    by_clip = pivot_to_clips(long_rows)
+    has_quality = add_quality_to_clips(by_clip)
+    if has_quality:
+        for clip in by_clip.values():
+            summary[(clip["prompt_id"], clip["prompt_text"], "vbench_quality")].append(
+                clip["vbench_quality"]
+            )
+
     output_dir.mkdir(parents=True, exist_ok=True)
     long_csv = output_dir / "vbench_scores_long.csv"
     summ_csv = output_dir / "vbench_scores_summary.csv"
 
     with long_csv.open("w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=["prompt_id", "prompt_text", "axis", "seed_idx", "dimension", "score"])
+        w = csv.DictWriter(f, fieldnames=["prompt_id", "prompt_text", "seed_idx", "dimension", "score"])
         w.writeheader()
         w.writerows(sorted(long_rows, key=lambda r: (r["prompt_id"], r["dimension"], r["seed_idx"])))
 
@@ -225,7 +393,9 @@ def aggregate_to_csv(
             std = statistics.stdev(scores) if len(scores) > 1 else 0.0
             w.writerow([pid, ptext, dim, len(scores), f"{mean:.4f}", f"{std:.4f}", f"{min(scores):.4f}", f"{max(scores):.4f}"])
 
-    return long_csv, summ_csv
+    targets_csv = write_targets_csv(by_clip, output_dir, legacy_avg_vbench_z) if has_quality else None
+
+    return long_csv, summ_csv, targets_csv
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -238,6 +408,12 @@ def main(argv: list[str] | None = None) -> None:
                    help="Where to write VBench raw results + aggregated CSVs. Default: runs/vbench/<run_id>/")
     p.add_argument("--skip-staged", action="store_true",
                    help="Reuse existing staging dirs instead of re-symlinking.")
+    p.add_argument("--legacy-avg-vbench-z", action="store_true",
+                   help="DEPRECATED. Emit the retired per-prompt z-mean of six subscores as an "
+                        "extra vbench_targets.csv column, to compare against vbench_quality on "
+                        "an existing run. Do not use for new sweeps.")
+    p.add_argument("--aggregate-only", action="store_true",
+                   help="Skip scoring; rebuild the CSVs from the existing raw/*.json. No GPU.")
     args = p.parse_args(argv)
 
     run_dir: Path = args.run
@@ -245,7 +421,9 @@ def main(argv: list[str] | None = None) -> None:
         raise SystemExit(f"Run dir not found: {run_dir}")
 
     # Pick dimensions — by default, those matching the axes used in this run.
-    if args.dimensions:
+    if args.aggregate_only:
+        dimensions = []
+    elif args.dimensions:
         dimensions = [d.strip() for d in args.dimensions.split(",") if d.strip()]
     else:
         axes_used = sorted({m["axis"] for m, _ in _iter_clips(run_dir) if m.get("axis")})
@@ -269,7 +447,9 @@ def main(argv: list[str] | None = None) -> None:
     # 1) Stage videos. (For dims that aren't tied to a specific axis — e.g.
     #     subject_consistency, motion_smoothness — we restage ALL clips into
     #     a `_all/` dir so the dim sees every video.)
-    if not args.skip_staged:
+    if args.aggregate_only:
+        per_axis_staging = {}
+    elif not args.skip_staged:
         per_axis_staging = stage_videos_by_dimension(run_dir, staging_root, dimensions)
         # Restage everything for axis-agnostic dimensions.
         all_dir = staging_root / "_all"
@@ -287,6 +467,14 @@ def main(argv: list[str] | None = None) -> None:
     axis_bound = {"object_class", "multiple_objects", "human_action", "color",
                   "spatial_relationship", "scene", "appearance_style"}
 
+    # Hand VBench the prompt for each staged file rather than letting it parse the
+    # filename: `get_prompt_from_filename` strips only a trailing `-<digits>`, so our
+    # `-seedNNNN` suffix would end up inside the prompt text.
+    prompt_list = {
+        f"{_slug(m['prompt_text'])}-seed{int(m['seed']):04d}.mp4": m["prompt_text"]
+        for m, _ in _iter_clips(run_dir)
+    }
+
     results_by_dim: dict[str, dict] = {}
     for dim in dimensions:
         if dim in axis_bound:
@@ -298,14 +486,34 @@ def main(argv: list[str] | None = None) -> None:
             sdir = staging_root / "_all"
         print(f"[vbench] ▶ scoring dim={dim} dir={sdir}")
         try:
-            results_by_dim[dim] = run_vbench_for_dimension(dim, sdir, raw_root, device=args.device)
+            results_by_dim[dim] = run_vbench_for_dimension(
+                dim, sdir, raw_root, device=args.device, prompt_list=prompt_list
+            )
         except Exception as e:  # noqa: BLE001
             print(f"[vbench] ERROR on {dim}: {type(e).__name__}: {e}")
 
-    # 3) Aggregate.
-    long_csv, summ_csv = aggregate_to_csv(run_dir, results_by_dim, out_root)
+    # 3) Pull in dimensions we did not re-score this run, so a partial `--dimensions`
+    #    run still emits every column. Keyed on `dimensions` rather than
+    #    `results_by_dim` so a dimension that errored above stays absent instead of
+    #    silently resurrecting its previous result.
+    for jf in sorted(raw_root.glob("*__all_eval_results.json")):
+        dim = jf.name[: -len("__all_eval_results.json")]
+        if dim in dimensions:
+            continue
+        results_by_dim.setdefault(dim, json.loads(jf.read_text()))
+        print(f"[vbench] reusing {dim} from {jf.name}")
+
+    if args.aggregate_only and not results_by_dim:
+        raise SystemExit(f"--aggregate-only: no *__all_eval_results.json under {raw_root}")
+
+    # 4) Aggregate.
+    long_csv, summ_csv, targets_csv = aggregate_to_csv(
+        run_dir, results_by_dim, out_root, legacy_avg_vbench_z=args.legacy_avg_vbench_z
+    )
     print(f"[vbench] long CSV: {long_csv}")
     print(f"[vbench] summary CSV: {summ_csv}")
+    if targets_csv is not None:
+        print(f"[vbench] targets CSV: {targets_csv}")
 
 
 if __name__ == "__main__":

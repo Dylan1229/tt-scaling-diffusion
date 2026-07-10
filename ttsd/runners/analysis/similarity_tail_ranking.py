@@ -78,7 +78,6 @@ def _metric_row_for_seed(
     row = dict(vbench_rows.get((prompt_id, seed_idx), {}))
     row.setdefault("prompt_id", prompt_id)
     row.setdefault("prompt_text", "")
-    row.setdefault("axis", "")
     row["seed_idx"] = seed_idx
     row["heatmap_path"] = str(heatmap_path)
     row["score_name"] = _metric_output_stem(score_type, tail_fraction, late_rows)
@@ -96,28 +95,44 @@ def _metric_row_for_seed(
     return row
 
 
+def _rank_key(row: dict[str, object]) -> tuple:
+    return (
+        -float(row["score_value"]),
+        -float(row["late_tail_mean_q"]),
+        -float(row["heatmap_mean"]),
+        -float(row["min_similarity"]),
+        int(row["seed_idx"]),
+    )
+
+
 def _rank_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
     grouped: dict[str, list[dict[str, object]]] = defaultdict(list)
     for row in rows:
         grouped[str(row["prompt_id"])].append(row)
 
     ranked_rows: list[dict[str, object]] = []
-    for prompt_id, group in sorted(grouped.items()):
-        ordered = sorted(
-            group,
-            key=lambda row: (
-                -float(row["score_value"]),
-                -float(row["late_tail_mean_q"]),
-                -float(row["heatmap_mean"]),
-                -float(row["min_similarity"]),
-                int(row["seed_idx"]),
-            ),
-        )
+    for _prompt_id, group in sorted(grouped.items()):
+        ordered = sorted(group, key=_rank_key)
         prompt_size = len(ordered)
         for rank, row in enumerate(ordered, start=1):
             row["tail_mean_rank"] = rank
             row["prompt_size"] = prompt_size
             ranked_rows.append(row)
+
+    # Rank again inside each (prompt, dynamic_degree) cell. A prompt's seeds differ in whether
+    # the video moves, and vbench_quality rewards stillness, so a prompt-wide rank partly
+    # orders by motion. No cell is dropped: a rank of 1 of 1 is still a valid winner.
+    cells: dict[tuple[str, int], list[dict[str, object]]] = defaultdict(list)
+    for row in ranked_rows:
+        dyn = int(float(row["dynamic_degree"])) if "dynamic_degree" in row else -1
+        row["dynamic_degree"] = dyn
+        cells[(str(row["prompt_id"]), dyn)].append(row)
+    for group in cells.values():
+        ordered = sorted(group, key=_rank_key)
+        stratum_size = len(ordered)
+        for rank, row in enumerate(ordered, start=1):
+            row["stratum_rank"] = rank
+            row["stratum_size"] = stratum_size
     return ranked_rows
 
 
@@ -179,10 +194,12 @@ def main(argv: list[str] | None = None) -> None:
     fieldnames = [
         "prompt_id",
         "prompt_text",
-        "axis",
         "seed_idx",
         "prompt_size",
         "tail_mean_rank",
+        "dynamic_degree",
+        "stratum_size",
+        "stratum_rank",
         "score_name",
         "score_value",
         "tail_fraction",
@@ -203,12 +220,18 @@ def main(argv: list[str] | None = None) -> None:
         "heatmap_path",
     ]
 
+    stratum_winners: list[dict[str, object]] = [
+        row for row in ranked_rows if int(row["stratum_rank"]) == 1
+    ]
+
     all_rows_csv = output_dir / f"{output_stem}_seed_rankings.csv"
     winners_csv = output_dir / f"{output_stem}_prompt_winners.csv"
+    stratum_winners_csv = output_dir / f"{output_stem}_stratum_winners.csv"
     metadata_json = output_dir / f"{output_stem}_metadata.json"
 
     _write_csv(all_rows_csv, ranked_rows, fieldnames)
     _write_csv(winners_csv, winners, fieldnames)
+    _write_csv(stratum_winners_csv, stratum_winners, fieldnames)
 
     metadata = {
         "heatmap_run_root": str(heatmap_run_root),
@@ -223,6 +246,7 @@ def main(argv: list[str] | None = None) -> None:
         "output_files": {
             "seed_rankings_csv": str(all_rows_csv),
             "prompt_winners_csv": str(winners_csv),
+            "stratum_winners_csv": str(stratum_winners_csv),
         },
     }
     metadata_json.write_text(json.dumps(metadata, indent=2))

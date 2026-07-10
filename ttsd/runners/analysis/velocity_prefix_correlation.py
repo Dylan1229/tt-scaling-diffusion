@@ -35,10 +35,12 @@ import numpy as np
 from ttsd.runners.utilities.ranking import _rankdata
 from ttsd.runners.utilities.run_layout import resolve_run_id, stage_output_dir
 from ttsd.runners.utilities.seed_vbench_loaders import (
-    SUBSCORES,
+    MIN_STRATUM_SEEDS,
     _iter_seed_dirs,
     _load_vbench_rows,
     _seed_idx_from_name,
+    annotate_vbench_targets,
+    cell_groups,
 )
 
 PATCH_FILE = "posterior_mean_patch_features.npy"
@@ -120,34 +122,30 @@ def main() -> None:
         del F
     print(f"[velocity_prefix_correlation] loaded {len(records)} seeds", file=sys.stderr)
 
-    # Per-prompt z-normalize the 6 subscores -> avg_vbench_z
-    grouped: dict[str, list[dict[str, object]]] = defaultdict(list)
-    for r in records:
-        grouped[str(r["prompt_id"])].append(r)
-    for group in grouped.values():
-        for metric in SUBSCORES:
-            vs = np.array([float(g[metric]) for g in group])
-            mu, sd = vs.mean(), vs.std(ddof=0)
-            zs = np.zeros_like(vs) if sd == 0 else (vs - mu) / sd
-            for g, z in zip(group, zs):
-                g[f"z_{metric}"] = float(z)
-        for g in group:
-            g["avg_vbench_z"] = float(np.mean([g[f"z_{m}"] for m in SUBSCORES]))
+    annotate_vbench_targets(records)
 
-    y = np.array([r["avg_vbench_z"] for r in records])
+    y = np.array([r["vbench_quality"] for r in records])
     prompt_to_idx: dict[str, list[int]] = defaultdict(list)
     for i, r in enumerate(records):
         prompt_to_idx[str(r["prompt_id"])].append(i)
 
     n_prompts = len(prompt_to_idx)
     metric_keys = sorted(k for k in records[0].keys() if k.startswith("L_s0_"))
+    metric_col = {k: np.array([r[k] for r in records], float) for k in metric_keys}
     rows: list[tuple[str, int, float, int]] = []
     for k in metric_keys:
-        s = np.array([r[k] for r in records], float)
         for sign in (1, -1):
-            ss = sign * s
+            ss = sign * metric_col[k]
             rows.append((k, sign, _within(ss, y, prompt_to_idx), _winner_match(ss, y, prompt_to_idx)))
     rows.sort(key=lambda r: -abs(r[2]))
+    pooled_order = [(r[0], r[1]) for r in rows]
+
+    # Re-group by (prompt, dynamic_degree) so motion is held fixed; vbench_quality otherwise
+    # rewards stillness and the correlation partly measures that.
+    have_dyn = all("dynamic_degree" in r for r in records)
+    pti_dyn = {f"dyn{d}": cell_groups(records, d) for d in (0, 1)} if have_dyn else {}
+    dyn_total = ({d: sum(1 for r in records if int(float(r["dynamic_degree"])) == d)
+                  for d in (0, 1)} if have_dyn else {})
 
     report: list[str] = []
     wm_w = len(str(n_prompts)) * 2 + 1
@@ -164,16 +162,37 @@ def main() -> None:
             s0, ss = int(parts[2]), int(parts[4])
             bucket_sp["pooled"][(s0, ss)] = sp
 
+    pretty = {"dyn0": "static", "dyn1": "moving"}
+    for lbl, pti in pti_dyn.items():
+        n_cells = len(pti)
+        n_kept = sum(len(v) for v in pti.values())
+        n_dropped = dyn_total[int(lbl[-1])] - n_kept
+        wm_w_s = len(str(n_cells)) * 2 + 1
+        report.append("")
+        report.append(f"--- stratum {lbl} ({pretty[lbl]}): {n_cells} cells, {n_kept} clips "
+                      f"(dropped {n_dropped} in cells with <{MIN_STRATUM_SEEDS} seeds) ---")
+        report.append(f"{'metric':<48} {'sign':>4} {'sp_within':>10} {'WM':>{wm_w_s}}")
+        report.append("-" * (66 + wm_w_s))
+        bucket_sp[lbl] = {}
+        for k, sign in pooled_order:
+            ss = sign * metric_col[k]
+            sp = _within(ss, y, pti)
+            wm = _winner_match(ss, y, pti)
+            report.append(f"{k:<48} {sign:>4} {sp:>10.4f} "
+                          f"{wm:>{wm_w_s - len(str(n_cells)) - 1}}/{n_cells}")
+            if sign == 1:
+                parts = k.split("_")
+                bucket_sp[lbl][(int(parts[2]), int(parts[4]))] = sp
+
     sizes = sorted({len(ps) for ps in prompt_to_idx.values()})
     if len(sizes) > 1:
-        pooled_order = [(r[0], r[1]) for r in rows]
         for sz in sizes:
             bucket_recs = [r for r in records if len(prompt_to_idx[str(r["prompt_id"])]) == sz]
             pti_sub: dict[str, list[int]] = defaultdict(list)
             for i, r in enumerate(bucket_recs):
                 pti_sub[str(r["prompt_id"])].append(i)
             n_sub = len(pti_sub)
-            y_sub = np.array([r["avg_vbench_z"] for r in bucket_recs])
+            y_sub = np.array([r["vbench_quality"] for r in bucket_recs])
             bucket_stats: dict[tuple[str, int], tuple[float, int]] = {}
             for k in metric_keys:
                 s_sub = np.array([r[k] for r in bucket_recs], float)
@@ -222,7 +241,7 @@ def main() -> None:
             ax.axhline(0, color="grey", lw=0.5, ls="--")
             ax.plot(s_vals, sp_vals, "o-", color=cmap(s0 / max(1, T - 2)))
             ax.set_xlabel("posterior step  s")
-            ax.set_ylabel(r"within-prompt Spearman$(\bar L_s,\ \mathrm{avg\_vbench\_z})$")
+            ax.set_ylabel(r"within-prompt Spearman$(\bar L_s,\ \mathrm{vbench\_quality})$")
             ax.set_title(f"prefix-locking ({bucket_label}): $s_0$ = {s0}")
             ax.set_xticks(s_vals)
             ax.grid(alpha=0.25, lw=0.4)
@@ -234,7 +253,7 @@ def main() -> None:
 
         overlay_ax.axhline(0, color="grey", lw=0.5, ls="--")
         overlay_ax.set_xlabel("posterior step  s")
-        overlay_ax.set_ylabel(r"within-prompt Spearman$(\bar L_s,\ \mathrm{avg\_vbench\_z})$")
+        overlay_ax.set_ylabel(r"within-prompt Spearman$(\bar L_s,\ \mathrm{vbench\_quality})$")
         overlay_ax.set_title(f"prefix-locking ({bucket_label}): all $s_0$ overlaid")
         overlay_ax.set_xticks(list(range(1, T)))
         overlay_ax.grid(alpha=0.25, lw=0.4)

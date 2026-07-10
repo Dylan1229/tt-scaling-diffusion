@@ -29,6 +29,8 @@ from ttsd.runners.utilities.seed_vbench_loaders import (
     _iter_seed_dirs,
     _load_vbench_rows,
     _seed_idx_from_name,
+    annotate_vbench_targets,
+    cell_groups_rows,
 )
 
 VALID_DIRECTIONS = {"rows", "cols"}
@@ -113,21 +115,7 @@ def _load_seed_records(
         record["heatmap"] = heatmap
         seed_records.append(record)
 
-    grouped = defaultdict(list)
-    for record in seed_records:
-        grouped[str(record["prompt_id"])].append(record)
-
-    for _, group in grouped.items():
-        for metric in SUBSCORES:
-            values = np.array([float(row[metric]) for row in group], dtype=float)
-            mean = values.mean()
-            std = values.std(ddof=0)
-            z_values = np.zeros_like(values) if std == 0 else (values - mean) / std
-            for row, z_value in zip(group, z_values):
-                row[f"z_{metric}"] = float(z_value)
-        for row in group:
-            row["avg_vbench_z"] = float(np.mean([row[f"z_{metric}"] for metric in SUBSCORES]))
-            row["avg_vbench_raw"] = float(np.mean([float(row[metric]) for metric in SUBSCORES]))
+    annotate_vbench_targets(seed_records)
 
     return seed_records, max_rows, max_cols
 
@@ -176,8 +164,8 @@ def _alignment_stats(by_prompt_subset: dict[str, list[dict[str, object]]],
         score_top5_overlap_total += len(score_top5_seed_ids & metric_top5_seed_ids) / 5.0
     n = len(by_prompt_subset)
     return {
-        "prompt_mean_spearman": float(np.mean(prompt_spearmans)) if prompt_spearmans else float("nan"),
-        "prompt_median_spearman": float(np.median(prompt_spearmans)) if prompt_spearmans else float("nan"),
+        "prompt_mean_spearman": float(np.nanmean(prompt_spearmans)) if prompt_spearmans else float("nan"),
+        "prompt_median_spearman": float(np.nanmedian(prompt_spearmans)) if prompt_spearmans else float("nan"),
         "winner_match": winner_match,
         "winner_match_rate": winner_match / n if n else float("nan"),
         "top3_hit": top3_hit,
@@ -200,7 +188,7 @@ def _compute_alignment_rows(
     for row in seed_records:
         by_prompt[str(row["prompt_id"])].append(row)
 
-    target_metrics = SUBSCORES + ["avg_vbench_z", "avg_vbench_raw"]
+    target_metrics = SUBSCORES + ["vbench_quality"]
     summary_rows: list[dict[str, object]] = []
 
     for last_n in last_n_values:
@@ -215,7 +203,14 @@ def _compute_alignment_rows(
                 }
                 for metric in target_metrics:
                     candidate[metric] = float(row[metric])
+                if "dynamic_degree" in row:
+                    candidate["dynamic_degree"] = float(row["dynamic_degree"])
                 candidate_rows.append(candidate)
+
+            # Motion is held fixed inside a (prompt, dynamic_degree) cell.
+            stratify = all("dynamic_degree" in c for c in candidate_rows)
+            cells_by_dyn = ({d: cell_groups_rows(candidate_rows, d) for d in (0, 1)}
+                            if stratify else {})
 
             score_values = np.array([row["score_value"] for row in candidate_rows], dtype=float)
             prefix_name = SCORE_PREFIX_BY_MATRIX_TYPE[matrix_type][direction]
@@ -275,8 +270,8 @@ def _compute_alignment_rows(
                 summary["n_prompts"] = len(by_prompt)
                 summary[f"{prefix}_pearson"] = pearson
                 summary[f"{prefix}_spearman"] = spearman
-                summary[f"{prefix}_prompt_mean_spearman"] = float(np.mean(prompt_spearmans))
-                summary[f"{prefix}_prompt_median_spearman"] = float(np.median(prompt_spearmans))
+                summary[f"{prefix}_prompt_mean_spearman"] = float(np.nanmean(prompt_spearmans))
+                summary[f"{prefix}_prompt_median_spearman"] = float(np.nanmedian(prompt_spearmans))
                 summary[f"{prefix}_winner_match"] = winner_match
                 summary[f"{prefix}_winner_match_rate"] = winner_match / len(by_prompt)
                 summary[f"{prefix}_top3_hit"] = top3_hit
@@ -302,6 +297,15 @@ def _compute_alignment_rows(
                     summary[f"{prefix}_score_top5_contains_target_best_rate_n{sz}"] = b["score_top5_contains_target_best_rate"]
                     summary[f"{prefix}_score_top5_overlap_rate_n{sz}"] = b["score_top5_overlap_rate"]
 
+                for d in (0, 1):
+                    st = _alignment_stats(cells_by_dyn[d], metric) if stratify else {}
+                    summary[f"n_cells_dyn{d}"] = st.get("n_prompts", 0)
+                    for stat in ("prompt_mean_spearman", "prompt_median_spearman", "winner_match",
+                                 "winner_match_rate", "top3_hit", "top3_hit_rate",
+                                 "score_top5_contains_target_best",
+                                 "score_top5_contains_target_best_rate", "score_top5_overlap_rate"):
+                        summary[f"{prefix}_{stat}_dyn{d}"] = st.get(stat, float("nan"))
+
             summary_rows.append(summary)
 
     return summary_rows
@@ -322,13 +326,13 @@ def _write_markdown_summary(path: Path, rows: list[dict[str, object]]) -> None:
     direction = rows[0]["direction"]
     axis_label = "rows" if direction == "rows" else "columns"
     n_prompts = rows[0].get("n_prompts", "?") if rows else "?"
-    best_avg = max(rows, key=lambda row: row["avg_vbench_z_prompt_mean_spearman"])
+    best_avg = max(rows, key=lambda row: row["vbench_quality_prompt_mean_spearman"])
     best_subj = max(rows, key=lambda row: row["subject_consistency_prompt_mean_spearman"])
-    best_avg_winner = max(rows, key=lambda row: row["avg_vbench_z_winner_match"])
+    best_avg_winner = max(rows, key=lambda row: row["vbench_quality_winner_match"])
     best_subj_winner = max(rows, key=lambda row: row["subject_consistency_winner_match"])
-    best_avg_top5 = max(rows, key=lambda row: row["avg_vbench_z_score_top5_contains_target_best"])
+    best_avg_top5 = max(rows, key=lambda row: row["vbench_quality_score_top5_contains_target_best"])
     best_subj_top5 = max(rows, key=lambda row: row["subject_consistency_score_top5_contains_target_best"])
-    best_avg_top5_overlap = max(rows, key=lambda row: row["avg_vbench_z_score_top5_overlap_rate"])
+    best_avg_top5_overlap = max(rows, key=lambda row: row["vbench_quality_score_top5_overlap_rate"])
     best_subj_top5_overlap = max(rows, key=lambda row: row["subject_consistency_score_top5_overlap_rate"])
 
     lines = [
@@ -346,11 +350,11 @@ def _write_markdown_summary(path: Path, rows: list[dict[str, object]]) -> None:
         f"Direction: `{direction}`",
         f"Number of prompts: `{n_prompts}`",
         "",
-        "## Best by prompt-local average VBench z Spearman",
+        "## Best by vbench_quality Spearman",
         "",
         f"- score: `{best_avg['score_name']}`",
-        f"- `avg_vbench_z_prompt_mean_spearman = {best_avg['avg_vbench_z_prompt_mean_spearman']:.4f}`",
-        f"- `avg_vbench_z_winner_match = {best_avg['avg_vbench_z_winner_match']}/{n_prompts}`",
+        f"- `vbench_quality_prompt_mean_spearman = {best_avg['vbench_quality_prompt_mean_spearman']:.4f}`",
+        f"- `vbench_quality_winner_match = {best_avg['vbench_quality_winner_match']}/{n_prompts}`",
         "",
         "## Best by subject consistency Spearman",
         "",
@@ -358,11 +362,11 @@ def _write_markdown_summary(path: Path, rows: list[dict[str, object]]) -> None:
         f"- `subject_consistency_prompt_mean_spearman = {best_subj['subject_consistency_prompt_mean_spearman']:.4f}`",
         f"- `subject_consistency_winner_match = {best_subj['subject_consistency_winner_match']}/{n_prompts}`",
         "",
-        "## Best by prompt-local average VBench winner match",
+        "## Best by vbench_quality winner match",
         "",
         f"- score: `{best_avg_winner['score_name']}`",
-        f"- `avg_vbench_z_winner_match = {best_avg_winner['avg_vbench_z_winner_match']}/{n_prompts}`",
-        f"- `avg_vbench_z_prompt_mean_spearman = {best_avg_winner['avg_vbench_z_prompt_mean_spearman']:.4f}`",
+        f"- `vbench_quality_winner_match = {best_avg_winner['vbench_quality_winner_match']}/{n_prompts}`",
+        f"- `vbench_quality_prompt_mean_spearman = {best_avg_winner['vbench_quality_prompt_mean_spearman']:.4f}`",
         "",
         "## Best by subject consistency winner match",
         "",
@@ -370,11 +374,11 @@ def _write_markdown_summary(path: Path, rows: list[dict[str, object]]) -> None:
         f"- `subject_consistency_winner_match = {best_subj_winner['subject_consistency_winner_match']}/{n_prompts}`",
         f"- `subject_consistency_prompt_mean_spearman = {best_subj_winner['subject_consistency_prompt_mean_spearman']:.4f}`",
         "",
-        "## Best by prompt-local average VBench top-5 containment",
+        "## Best by vbench_quality top-5 containment",
         "",
         f"- score: `{best_avg_top5['score_name']}`",
-        f"- `avg_vbench_z_score_top5_contains_target_best = {best_avg_top5['avg_vbench_z_score_top5_contains_target_best']}/{n_prompts}`",
-        f"- `avg_vbench_z_prompt_mean_spearman = {best_avg_top5['avg_vbench_z_prompt_mean_spearman']:.4f}`",
+        f"- `vbench_quality_score_top5_contains_target_best = {best_avg_top5['vbench_quality_score_top5_contains_target_best']}/{n_prompts}`",
+        f"- `vbench_quality_prompt_mean_spearman = {best_avg_top5['vbench_quality_prompt_mean_spearman']:.4f}`",
         "",
         "## Best by subject consistency top-5 containment",
         "",
@@ -382,10 +386,10 @@ def _write_markdown_summary(path: Path, rows: list[dict[str, object]]) -> None:
         f"- `subject_consistency_score_top5_contains_target_best = {best_subj_top5['subject_consistency_score_top5_contains_target_best']}/{n_prompts}`",
         f"- `subject_consistency_prompt_mean_spearman = {best_subj_top5['subject_consistency_prompt_mean_spearman']:.4f}`",
         "",
-        "## Best by prompt-local average VBench top-5 overlap",
+        "## Best by vbench_quality top-5 overlap",
         "",
         f"- score: `{best_avg_top5_overlap['score_name']}`",
-        f"- `avg_vbench_z_score_top5_overlap_rate = {best_avg_top5_overlap['avg_vbench_z_score_top5_overlap_rate']:.4f}`",
+        f"- `vbench_quality_score_top5_overlap_rate = {best_avg_top5_overlap['vbench_quality_score_top5_overlap_rate']:.4f}`",
         "",
         "## Best by subject consistency top-5 overlap",
         "",
@@ -426,8 +430,8 @@ def main(argv: list[str] | None = None) -> None:
     rows = sorted(
         rows,
         key=lambda row: (
-            -row["avg_vbench_z_prompt_mean_spearman"],
-            -row["avg_vbench_z_winner_match"],
+            -row["vbench_quality_prompt_mean_spearman"],
+            -row["vbench_quality_winner_match"],
             row["last_n"],
             row["tail_k"],
         ),

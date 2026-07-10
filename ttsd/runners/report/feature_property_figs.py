@@ -1,9 +1,13 @@
 """Generate figures + summary numbers for the DINOv2 feature-property report.
 
+One showcase (prompt, dynamic_degree) cell per stratum — the cell whose best-vs-worst
+`vbench_quality` gap is widest — so the moving showcase never contrasts a frozen clip with a
+moving one.
+
 Outputs (under --output-dir):
-  fig_frame_heatmap_good_vs_bad.png
-  fig_velcos_curve_good_vs_bad.png
-  fig_scalar_scatter.png
+  fig_frame_heatmap_<prompt>_dyn<0|1>.png
+  fig_velcos_curve_<prompt>_dyn<0|1>.png
+  fig_scalar_scatter.png     (all clips, coloured by dynamic_degree, showcase seeds circled)
   metrics_summary.json
 """
 from __future__ import annotations
@@ -23,27 +27,14 @@ import numpy as np
 from ttsd.runners.utilities.ranking import _rankdata
 from ttsd.runners.utilities.run_layout import resolve_run_id, stage_output_dir
 from ttsd.runners.utilities.seed_vbench_loaders import (
-    SUBSCORES,
     _iter_seed_dirs,
     _load_vbench_rows,
     _seed_idx_from_name,
+    annotate_vbench_targets,
+    best_worst,
+    cell_groups,
+    prompt_strata,
 )
-
-
-def _avg_z_records(records):
-    grouped = defaultdict(list)
-    for r in records:
-        grouped[r["prompt_id"]].append(r)
-    for group in grouped.values():
-        for m in SUBSCORES:
-            v = np.array([float(g[m]) for g in group])
-            mu, sd = v.mean(), v.std(ddof=0)
-            z = np.zeros_like(v) if sd == 0 else (v - mu) / sd
-            for g, zz in zip(group, z):
-                g[f"z_{m}"] = float(zz)
-        for g in group:
-            g["avg_vbench_z"] = float(np.mean([g[f"z_{m}"] for m in SUBSCORES]))
-    return records
 
 
 def _patch_velcos_curve(F):
@@ -82,7 +73,7 @@ def main():
         rec["seed_dir"] = str(sd)
         rec["patch_dir"] = str(args.patch_run_root / prompt_id / sd.name)
         records.append(rec)
-    records = _avg_z_records(records)
+    annotate_vbench_targets(records)
 
     # Compute headline single scalars on every seed
     for r in records:
@@ -105,54 +96,68 @@ def main():
         r["finalpost_velcos_pm_mean"] = float(r["velcos_curve"].mean())
         del F_cls, F_p
 
-    # Pick prompt with largest spread in avg_vbench_z (visible contrast)
+    # One showcase cell per dynamic_degree stratum, each the (prompt, stratum) whose best/worst
+    # vbench_quality gap is widest. Keeping the two strata separate means the moving showcase
+    # never contrasts a frozen clip with a moving one.
     by_p = defaultdict(list)
     for r in records:
         by_p[r["prompt_id"]].append(r)
-    spread = {p: max(g, key=lambda x: x["avg_vbench_z"])["avg_vbench_z"]
-                  - min(g, key=lambda x: x["avg_vbench_z"])["avg_vbench_z"]
-              for p, g in by_p.items()}
-    pick = max(spread, key=spread.get)
-    g = by_p[pick]
-    good = max(g, key=lambda x: x["avg_vbench_z"])
-    bad = min(g, key=lambda x: x["avg_vbench_z"])
-    print(f"[fig] prompt={pick}  good=seed{good['seed_idx']:04d} z={good['avg_vbench_z']:.2f}"
-          f"  bad=seed{bad['seed_idx']:04d} z={bad['avg_vbench_z']:.2f}", file=sys.stderr)
 
-    # ---------- Figure 1: frame-neighbor heatmaps good vs bad ----------
-    fr_g = np.load(Path(good["seed_dir"]) / "posterior_mean_frame_neighbor_similarity.npy")
-    fr_b = np.load(Path(bad["seed_dir"]) / "posterior_mean_frame_neighbor_similarity.npy")
-    vmin = min(fr_g.min(), fr_b.min()); vmax = max(fr_g.max(), fr_b.max())
-    fig, axes = plt.subplots(1, 2, figsize=(9, 3.2), constrained_layout=True)
-    for ax, M, ttl in [(axes[0], fr_g, f"good seed (z={good['avg_vbench_z']:+.2f})"),
-                       (axes[1], fr_b, f"bad seed (z={bad['avg_vbench_z']:+.2f})")]:
-        im = ax.imshow(M, aspect="auto", cmap="viridis", vmin=vmin, vmax=vmax,
-                       interpolation="nearest")
-        ax.set_xlabel("frame pair k")
-        ax.set_ylabel("posterior step i")
-        ax.set_title(ttl, fontsize=10)
-    fig.colorbar(im, ax=axes, fraction=0.03, pad=0.02, label="cos(F[i,k], F[i,k+1])")
-    fig.suptitle(f"Cross-frame DINOv2 cosine — prompt {pick}", fontsize=11)
-    fig.savefig(args.output_dir / "fig_frame_heatmap_good_vs_bad.png", dpi=140)
-    plt.close(fig)
+    cells: dict[int, tuple[str, dict, dict, list[dict]]] = {}
+    for prompt_id, group in by_p.items():
+        for dyn, stratum in prompt_strata(group):
+            g, b = best_worst(stratum)
+            gap = g["vbench_quality"] - b["vbench_quality"]
+            if dyn not in cells or gap > (cells[dyn][1]["vbench_quality"]
+                                          - cells[dyn][2]["vbench_quality"]):
+                cells[dyn] = (prompt_id, g, b, stratum)
 
-    # ---------- Figure 2: velcos convergence curve good vs bad ----------
-    fig, ax = plt.subplots(figsize=(5.2, 3.2), constrained_layout=True)
-    xs = np.arange(len(good["velcos_curve"]))
-    ax.plot(xs, good["velcos_curve"], "o-", color="C2",
-            label=f"good (z={good['avg_vbench_z']:+.2f})")
-    ax.plot(xs, bad["velcos_curve"], "s-", color="C3",
-            label=f"bad (z={bad['avg_vbench_z']:+.2f})")
-    ax.axhline(1.0, ls=":", color="grey", lw=0.8)
-    ax.set_xlabel("posterior step i")
-    ax.set_ylabel(r"$\overline{\cos(v_i,\,v_{T-1})}$")
-    ax.set_title(f"Inter-frame velocity alignment to final\n"
-                 f"prompt {pick}", fontsize=10)
-    ax.legend(fontsize=8)
-    fig.savefig(args.output_dir / "fig_velcos_curve_good_vs_bad.png", dpi=140)
-    plt.close(fig)
+    showcases = []
+    for dyn in sorted(cells, reverse=True):
+        pick, good, bad, stratum = cells[dyn]
+        tag = f"dyn={dyn} n={len(stratum)}"
+        showcases.append((dyn, pick, good, bad, tag))
+        print(f"[fig] showcase dyn={dyn}: prompt={pick} [{tag}]  "
+              f"good=seed{int(good['seed_idx']):04d} q={good['vbench_quality']:.3f}  "
+              f"bad=seed{int(bad['seed_idx']):04d} q={bad['vbench_quality']:.3f}", file=sys.stderr)
 
-    # ---------- Figure 3: scatter of 3 headline scalars vs avg_vbench_z ----------
+    for dyn, pick, good, bad, stratum_tag in showcases:
+        gi, bi = int(good["seed_idx"]), int(bad["seed_idx"])
+
+        # ---------- Figure 1: frame-neighbor heatmaps good vs bad ----------
+        fr_g = np.load(Path(good["seed_dir"]) / "posterior_mean_frame_neighbor_similarity.npy")
+        fr_b = np.load(Path(bad["seed_dir"]) / "posterior_mean_frame_neighbor_similarity.npy")
+        vmin = min(fr_g.min(), fr_b.min()); vmax = max(fr_g.max(), fr_b.max())
+        fig, axes = plt.subplots(1, 2, figsize=(9, 3.2), constrained_layout=True)
+        for ax, M, ttl in [(axes[0], fr_g, f"good {pick} seed{gi:04d} (q={good['vbench_quality']:.3f})"),
+                           (axes[1], fr_b, f"bad {pick} seed{bi:04d} (q={bad['vbench_quality']:.3f})")]:
+            im = ax.imshow(M, aspect="auto", cmap="viridis", vmin=vmin, vmax=vmax,
+                           interpolation="nearest")
+            ax.set_xlabel("frame pair k")
+            ax.set_ylabel("posterior step i")
+            ax.set_title(ttl, fontsize=10)
+        fig.colorbar(im, ax=axes, fraction=0.03, pad=0.02, label="cos(F[i,k], F[i,k+1])")
+        fig.suptitle(f"Cross-frame DINOv2 cosine — prompt {pick}  [{stratum_tag}]", fontsize=11)
+        fig.savefig(args.output_dir / f"fig_frame_heatmap_{pick}_dyn{dyn}.png", dpi=140)
+        plt.close(fig)
+
+        # ---------- Figure 2: velcos convergence curve good vs bad ----------
+        fig, ax = plt.subplots(figsize=(5.2, 3.2), constrained_layout=True)
+        xs = np.arange(len(good["velcos_curve"]))
+        ax.plot(xs, good["velcos_curve"], "o-", color="C2",
+                label=f"good seed{gi:04d} (q={good['vbench_quality']:.3f})")
+        ax.plot(xs, bad["velcos_curve"], "s-", color="C3",
+                label=f"bad seed{bi:04d} (q={bad['vbench_quality']:.3f})")
+        ax.axhline(1.0, ls=":", color="grey", lw=0.8)
+        ax.set_xlabel("posterior step i")
+        ax.set_ylabel(r"$\overline{\cos(v_i,\,v_{T-1})}$")
+        ax.set_title(f"Inter-frame velocity alignment to final\n"
+                     f"prompt {pick}  [{stratum_tag}]", fontsize=10)
+        ax.legend(fontsize=8)
+        fig.savefig(args.output_dir / f"fig_velcos_curve_{pick}_dyn{dyn}.png", dpi=140)
+        plt.close(fig)
+
+    # ---------- Figure 3: scatter of 3 headline scalars vs vbench_quality ----------
     # within-prompt residualized scalars to avoid prompt-bias dominating the eye
     def _wpr(key):
         out = np.array([r[key] for r in records], float)
@@ -167,19 +172,16 @@ def main():
                                 if prompt_size[r["prompt_id"]] == sz])
                   for sz in sizes}
 
-    # Prompt-mean Spearman: per-prompt rank correlation, averaged across prompts in
-    # the subset. Matches similarity_reduction_gridsearch.py and feature_ridge_regression.py.
+    # Prompt-mean Spearman: per-group rank correlation, averaged across groups. Matches
+    # similarity_reduction_gridsearch.py and feature_ridge_regression.py.
     prompt_ids = [r["prompt_id"] for r in records]
 
-    def _rho_w_subset(x, y_, idx):
-        by_p = defaultdict(list)
-        for i in idx:
-            by_p[prompt_ids[int(i)]].append(int(i))
+    def _rho_w_groups(x, y_, groups):
         rhos = []
-        for p_idx in by_p.values():
-            if len(p_idx) < 2:
+        for g_idx in groups.values():
+            if len(g_idx) < 2:
                 continue
-            xb = x[p_idx]; yb = y_[p_idx]
+            xb = x[g_idx]; yb = y_[g_idx]
             ra = _rankdata(xb); rb = _rankdata(yb)
             ra -= ra.mean(); rb -= rb.mean()
             denom = float(np.sqrt((ra ** 2).sum() * (rb ** 2).sum()))
@@ -188,39 +190,77 @@ def main():
             rhos.append(float((ra * rb).sum() / denom))
         return float(np.mean(rhos)) if rhos else float("nan")
 
-    y = _wpr("avg_vbench_z")
+    def _rho_w_subset(x, y_, idx):
+        groups = defaultdict(list)
+        for i in idx:
+            groups[prompt_ids[int(i)]].append(int(i))
+        return _rho_w_groups(x, y_, groups)
+
+    idx_of = {id(r): i for i, r in enumerate(records)}
+    prompt_to_idx = {p: [idx_of[id(r)] for r in g] for p, g in by_p.items()}
+    # Within a (prompt, dynamic_degree) cell, motion is held fixed, so the correlation there is
+    # quality signal rather than the stillness confound.
+    dyn_groups = {d: cell_groups(records, d) for d in (1, 0)}
+    has_dyn = "dynamic_degree" in records[0]
+    dyn_arr = (np.array([int(float(r["dynamic_degree"])) for r in records])
+               if has_dyn else np.zeros(len(records), int))
+
+    y = _wpr("vbench_quality")
     metrics = [
         ("f_tail80", r"frame consistency  $f_\mathrm{tail80}$"),
         ("finalpost_velcos_pm_mean", r"velocity-to-final cos  $\bar c_\mathrm{vel\to T}$"),
     ]
     all_idx = np.arange(len(records))
     scatter_rhos: dict[str, dict[str, float]] = {}
-    fig, axes = plt.subplots(1, 2, figsize=(8, 3.2), constrained_layout=True)
+    fig, axes = plt.subplots(1, 2, figsize=(9, 3.6), constrained_layout=True)
     for ax, (k, ttl) in zip(axes, metrics):
         x = _wpr(k)
         sp = _rho_w_subset(x, y, all_idx)
         bucket_sps = {sz: _rho_w_subset(x, y, bucket_idx[sz]) for sz in sizes}
-        scatter_rhos[k] = {"pooled": sp, **{f"n{sz}": v for sz, v in bucket_sps.items()}}
-        ax.scatter(x, y, s=14, alpha=0.65, edgecolor="none")
+        sp_dyn = {d: _rho_w_groups(x, y, dyn_groups[d]) for d in (1, 0)}
+        scatter_rhos[k] = {"pooled": sp,
+                           **{f"n{sz}": v for sz, v in bucket_sps.items()},
+                           **{f"dyn{d}": v for d, v in sp_dyn.items()}}
+
+        for d, color, lab in [(1, "C0", "moving"), (0, "C1", "static")]:
+            m = dyn_arr == d
+            if m.any():
+                ax.scatter(x[m], y[m], s=14, alpha=0.55, edgecolor="none", color=color,
+                           label=f"dyn={d} {lab} (n={int(m.sum())})")
+        for _dyn, pick_s, good_s, bad_s, _tag in showcases:
+            for rec, role in ((good_s, "good"), (bad_s, "bad")):
+                i = idx_of[id(rec)]
+                ax.scatter([x[i]], [y[i]], s=52, facecolors="none", edgecolors="k", lw=0.9, zorder=3)
+                ax.annotate(f"{pick_s} seed{int(rec['seed_idx']):04d} {role}", (x[i], y[i]),
+                            textcoords="offset points", xytext=(4, 3), fontsize=5)
         ax.axhline(0, color="grey", lw=0.5); ax.axvline(0, color="grey", lw=0.5)
-        sgn = "+" if sp > 0 else r"$-$"
-        if len(sizes) > 1:
-            bucket_str = "; " + " / ".join(f"{bucket_sps[sz]:+.3f} (n={sz})" for sz in sizes)
-            ax.set_title(f"{ttl}\n($\\rho_w$ = {sp:+.3f} all{bucket_str}, {sgn} correlated)",
-                         fontsize=7)
-        else:
-            ax.set_title(f"{ttl}\n($\\rho_w$ = {sp:+.3f}, {sgn} correlated)", fontsize=9)
+        dyn_str = (f"; {sp_dyn[1]:+.3f} dyn=1; {sp_dyn[0]:+.3f} dyn=0" if has_dyn else "")
+        ax.set_title(f"{ttl}\n($\\rho_w$ = {sp:+.3f} all{dyn_str})", fontsize=7)
         ax.set_xlabel("within-prompt centered metric")
-    axes[0].set_ylabel("within-prompt avg VBench z")
+    axes[0].set_ylabel("within-prompt centered vbench_quality")
+    axes[0].legend(fontsize=5, loc="best", framealpha=0.7)
+    fig.suptitle(f"{len(records)} clips over {len(by_p)} prompts; circled = the good/bad seeds "
+                 f"of the two showcase cells", fontsize=8)
     fig.savefig(args.output_dir / "fig_scalar_scatter.png", dpi=140)
     plt.close(fig)
 
     # summary stats
     out_json = {
-        "prompt_used": pick,
-        "good_seed": good["seed_idx"], "good_z": good["avg_vbench_z"],
-        "bad_seed": bad["seed_idx"], "bad_z": bad["avg_vbench_z"],
+        "showcases": [
+            {
+                "dynamic_degree": d,
+                "prompt_used": cells[d][0],
+                "stratum_n_seeds": len(cells[d][3]),
+                "good_seed": int(cells[d][1]["seed_idx"]),
+                "good_quality": cells[d][1]["vbench_quality"],
+                "bad_seed": int(cells[d][2]["seed_idx"]),
+                "bad_quality": cells[d][2]["vbench_quality"],
+            }
+            for d in sorted(cells, reverse=True)
+        ],
         "n_seeds": len(records),
+        "n_prompts": len(by_p),
+        "n_cells": {f"dyn{d}": len(dyn_groups[d]) for d in (1, 0)},
         "rho_w": scatter_rhos,
     }
     (args.output_dir / "metrics_summary.json").write_text(json.dumps(out_json, indent=2))
