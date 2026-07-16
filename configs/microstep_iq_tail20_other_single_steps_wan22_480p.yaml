@@ -1,0 +1,49 @@
+# Focused probe: rerun the 20 lowest baseline imaging-quality samples with
+# five extra microsteps at single denoising checkpoints other than step 20.
+
+model:
+  name: wan22_ti2v_5b
+  path: /data/datasets/fanjiang/.cache/huggingface/hub/models--Wan-AI--Wan2.2-TI2V-5B-Diffusers
+  dtype: bf16
+  device: cuda
+  scheduler: unipc
+
+generation:
+  resolution: [480, 832]
+  num_frames: 81
+  num_inference_steps: 50
+  guidance_scale: 5.0
+
+prompts:
+  source: ttsd.prompts.iq_tail20:DEV_PROMPTS
+
+seeds:
+  count: 1
+  base: 0
+
+microstep_grid:
+  index_base: 1
+  num_train_timesteps: 1000
+  include_baseline: false
+  anchors: []
+  extra_steps: []
+  variants:
+    - extra_steps_by_step: {10: 5}
+    - extra_steps_by_step: {15: 5}
+    - extra_steps_by_step: {25: 5}
+    - extra_steps_by_step: {30: 5}
+    - extra_steps_by_step: {35: 5}
+    - extra_steps_by_step: {40: 5}
+    - extra_steps_by_step: {45: 5}
+    - extra_steps_by_step: {50: 5}
+
+snapshots:
+  every_n_steps: 5
+  also_keep: [1, 49]
+
+output:
+  root: runs/microstep_grid
+  run_id: null
+  save_video: true
+  save_latents: false
+  save_meta: true
