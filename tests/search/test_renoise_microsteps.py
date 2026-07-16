@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from ttsd.runners.generate.renoise_microsteps import _load_variants
 from ttsd.search import RenoiseMicrostepWindow, build_renoise_replay_segment
 
 
@@ -49,13 +50,72 @@ def test_renoise_window_requires_earlier_rollback_step() -> None:
         RenoiseMicrostepWindow(trigger_step=4, rollback_to_step=4)
 
 
-def test_renoise_replay_segment_rejects_final_trigger_step() -> None:
+def test_renoise_replay_segment_supports_final_trigger_step_to_x0() -> None:
     base_timesteps = [1000, 900, 800]
     window = RenoiseMicrostepWindow(
         trigger_step=3,
         rollback_to_step=1,
+        extra_microsteps=2,
         index_base=1,
     )
 
-    with pytest.raises(ValueError, match="final denoising step"):
+    segment = build_renoise_replay_segment(base_timesteps, window)
+
+    assert segment.resume_index == 3
+    assert segment.resume_timestep == pytest.approx(0.0)
+    assert segment.base_replay_calls == 3
+    assert segment.extra_nfe == 5
+    assert segment.replay_timesteps == pytest.approx([1000, 800, 600, 400, 200])
+
+
+def test_renoise_replay_segment_rejects_trigger_after_final_step() -> None:
+    base_timesteps = [1000, 900, 800]
+    window = RenoiseMicrostepWindow(
+        trigger_step=4,
+        rollback_to_step=1,
+        index_base=1,
+    )
+
+    with pytest.raises(ValueError, match="after the final denoising step"):
         build_renoise_replay_segment(base_timesteps, window)
+
+
+def test_renoise_runner_loads_fixed_intervention() -> None:
+    variants, grid_mode = _load_variants(
+        {
+            "renoise_microsteps": {
+                "trigger_step": 10,
+                "rollback_to_step": 8,
+                "extra_microsteps": 5,
+            }
+        }
+    )
+
+    assert not grid_mode
+    assert len(variants) == 1
+    assert variants[0].name == ""
+    assert variants[0].trigger_step == 10
+    assert variants[0].rollback_to_step == 8
+
+
+def test_renoise_runner_loads_checkpoint_grid_defaults() -> None:
+    variants, grid_mode = _load_variants(
+        {
+            "renoise_grid": {
+                "rollback_distance": 2,
+                "extra_microsteps": 5,
+                "variants": [
+                    {"trigger_step": 10},
+                    {"trigger_step": 20, "noise_scale": 0.5},
+                ],
+            }
+        }
+    )
+
+    assert grid_mode
+    assert [variant.name for variant in variants] == [
+        "s10to08x05",
+        "s20to18x05",
+    ]
+    assert variants[1].rollback_to_step == 18
+    assert variants[1].noise_scale == pytest.approx(0.5)

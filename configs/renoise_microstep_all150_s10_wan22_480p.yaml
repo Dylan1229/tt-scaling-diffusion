@@ -1,0 +1,43 @@
+# Fixed Renoise + AddSteps intervention over the full 15-prompt / 10-seed
+# dev set: 150 paired intervention videos.
+#
+# After normal denoising step 10, re-noise to the step-8 noise level, replay
+# that interval with five extra microsteps, then continue the Euler schedule.
+
+model:
+  name: wan22_ti2v_5b_renoise_microsteps
+  path: /data/datasets/fanjiang/.cache/huggingface/hub/models--Wan-AI--Wan2.2-TI2V-5B-Diffusers
+  dtype: bf16
+  device: cuda
+  scheduler: euler
+
+generation:
+  resolution: [480, 832]
+  num_frames: 81
+  num_inference_steps: 50
+  guidance_scale: 5.0
+
+renoise_microsteps:
+  index_base: 1
+  trigger_step: 10
+  rollback_to_step: 8
+  extra_microsteps: 5
+  noise_scale: 1.0
+
+prompts:
+  source: ttsd.prompts.dev_set:DEV_PROMPTS
+
+seeds:
+  count: 10
+  base: 0
+
+snapshots:
+  every_n_steps: 50
+  also_keep: []
+
+output:
+  root: runs/renoise_microsteps
+  run_id: renoise_all150_s10_to_s08_x05_001
+  output_type: np
+  save_video: true
+  save_latents: false

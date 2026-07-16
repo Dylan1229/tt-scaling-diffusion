@@ -1,0 +1,36 @@
+# Same-scheduler baseline for the full Renoise + AddSteps sweep.
+#
+# Posterior means are saved every five steps so online verifier features can
+# be computed using only information available at each intervention point.
+
+model:
+  name: wan22_ti2v_5b_euler_all150
+  path: /data/datasets/fanjiang/.cache/huggingface/hub/models--Wan-AI--Wan2.2-TI2V-5B-Diffusers
+  dtype: bf16
+  device: cuda
+  scheduler: euler
+
+generation:
+  resolution: [480, 832]
+  num_frames: 81
+  num_inference_steps: 50
+  guidance_scale: 5.0
+
+prompts:
+  source: ttsd.prompts.dev_set:DEV_PROMPTS
+
+seeds:
+  count: 10
+  base: 0
+
+snapshots:
+  every_n_steps: 5
+  also_keep: []
+  posterior_means: true
+  capture_raw_latents: false
+
+output:
+  root: runs/baseline
+  run_id: all150_euler_online_001
+  save_video: true
+  save_latents: false

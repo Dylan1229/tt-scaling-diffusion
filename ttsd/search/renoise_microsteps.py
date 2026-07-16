@@ -95,11 +95,18 @@ def build_renoise_replay_segment(
 
     if rollback_index < 0:
         raise ValueError("rollback_to_step is before the first denoising step")
-    if resume_index >= len(base_timesteps):
-        raise ValueError("trigger_step must not be the final denoising step")
+    if trigger_index >= len(base_timesteps):
+        raise ValueError("trigger_step is after the final denoising step")
 
     rollback_timestep = _as_float(base_timesteps[rollback_index])
-    resume_timestep = _as_float(base_timesteps[resume_index])
+    # The final denoising step resumes at x0 (sigma/timestep 0). Supporting
+    # this endpoint lets a checkpoint grid include step 50 just like the
+    # existing AddSteps sweep.
+    resume_timestep = (
+        _as_float(base_timesteps[resume_index])
+        if resume_index < len(base_timesteps)
+        else 0.0
+    )
     if rollback_timestep <= resume_timestep:
         raise ValueError(
             "base_timesteps must be descending over the rollback window "

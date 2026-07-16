@@ -1,0 +1,53 @@
+# Full Renoise + AddSteps checkpoint sweep over the 15-prompt / 10-seed
+# dev set: 150 videos x 9 trigger checkpoints = 1350 generated videos.
+#
+# At each trigger, finish the normal trigger step, re-noise to two denoising
+# steps earlier, replay the local interval with five additional model calls,
+# then continue the original Euler schedule.
+
+model:
+  name: wan22_ti2v_5b_renoise_microsteps
+  path: /data/datasets/fanjiang/.cache/huggingface/hub/models--Wan-AI--Wan2.2-TI2V-5B-Diffusers
+  dtype: bf16
+  device: cuda
+  scheduler: euler
+
+generation:
+  resolution: [480, 832]
+  num_frames: 81
+  num_inference_steps: 50
+  guidance_scale: 5.0
+
+renoise_grid:
+  index_base: 1
+  rollback_distance: 2
+  extra_microsteps: 5
+  noise_scale: 1.0
+  variants:
+    - trigger_step: 10
+    - trigger_step: 15
+    - trigger_step: 20
+    - trigger_step: 25
+    - trigger_step: 30
+    - trigger_step: 35
+    - trigger_step: 40
+    - trigger_step: 45
+    - trigger_step: 50
+
+prompts:
+  source: ttsd.prompts.dev_set:DEV_PROMPTS
+
+seeds:
+  count: 10
+  base: 0
+
+snapshots:
+  every_n_steps: 50
+  also_keep: []
+
+output:
+  root: runs/renoise_microstep_grid
+  run_id: renoise_all150_sweep_001
+  output_type: np
+  save_video: true
+  save_latents: false
