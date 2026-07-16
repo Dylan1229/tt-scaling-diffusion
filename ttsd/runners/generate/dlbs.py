@@ -47,6 +47,8 @@ def _save_video(frames, path: Path, fps: int = 16) -> None:
 
     arr = frames if hasattr(frames, "__array__") else frames.cpu().numpy()
     arr = np.asarray(arr)
+    if arr.ndim == 5 and arr.shape[0] == 1:
+        arr = arr[0]
     if arr.dtype != np.uint8:
         arr = (arr.clip(0.0, 1.0) * 255).astype("uint8")
     if arr.ndim == 4 and arr.shape[-1] != 3 and arr.shape[1] == 3:

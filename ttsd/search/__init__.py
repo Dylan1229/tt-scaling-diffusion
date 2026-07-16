@@ -26,6 +26,11 @@ from ttsd.search.dlbs_reward import (
     VBenchRewardWeights,
     VBenchWeightedReward,
 )
+from ttsd.search.renoise_microsteps import (
+    RenoiseMicrostepWindow,
+    RenoiseReplaySegment,
+    build_renoise_replay_segment,
+)
 
 __all__ = [
     "DLBSBranchingConfig",
@@ -38,6 +43,8 @@ __all__ = [
     "InterventionCandidate",
     "InterventionContext",
     "InterventionResult",
+    "RenoiseMicrostepWindow",
+    "RenoiseReplaySegment",
     "ResamplingResult",
     "SearchPolicy",
     "StepContext",
@@ -46,6 +53,7 @@ __all__ = [
     "VBenchRewardWeights",
     "VBenchWeightedReward",
     "make_renoise_branch_fn",
+    "build_renoise_replay_segment",
     "multinomial_resample",
     "renoise_branch",
     "renoise_with_sigma_gap",

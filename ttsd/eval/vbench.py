@@ -58,6 +58,7 @@ ALL_VIDEO_DIMENSIONS: tuple[str, ...] = (
     "subject_consistency",
     "background_consistency",
     "motion_smoothness",
+    "dynamic_degree",
     "aesthetic_quality",
     "imaging_quality",
     "overall_consistency",

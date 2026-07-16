@@ -400,3 +400,46 @@ class Wan22Adapter:
             latents_by_step=output.latents_by_step,
             search_trace=output.trace,
         )
+
+    @torch.no_grad()
+    def generate_with_renoise_microsteps(
+        self,
+        prompt: str,
+        seed: int,
+        num_frames: int = 81,
+        height: int = 480,
+        width: int = 832,
+        num_inference_steps: int = 50,
+        guidance_scale: float = 5.0,
+        negative_prompt: str | None = None,
+        guidance_scale_2: float | None = None,
+        snapshot_steps: Iterable[int] = (),
+        renoise_config=None,
+    ) -> GenerationOutput:
+        """Run Wan with a local re-noise restart and replay microsteps."""
+        self._load()
+        from ttsd.models.wan22_renoise_microsteps import generate_wan22_renoise_microsteps
+
+        gen = torch.Generator(device=self.device).manual_seed(seed)
+        output = generate_wan22_renoise_microsteps(
+            self._pipe,
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            seed=seed,
+            height=height,
+            width=width,
+            num_frames=num_frames,
+            num_inference_steps=num_inference_steps,
+            guidance_scale=guidance_scale,
+            guidance_scale_2=guidance_scale_2,
+            generator=gen,
+            snapshot_steps=set(snapshot_steps),
+            config=renoise_config,
+        )
+
+        frames = output.frames[0] if isinstance(output.frames, (list, tuple)) else output.frames
+        return GenerationOutput(
+            frames=frames,
+            latents_by_step=output.latents_by_step,
+            search_trace=output.trace,
+        )

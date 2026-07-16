@@ -1,0 +1,46 @@
+# Targeted rescue probe for the bottom-10 baseline clips by no_dynamic6.
+#
+# This is the meeting-aligned Renoise + Microsteps setting:
+# after trigger step 20, re-noise to the step-18 noise level, replay that local
+# window with five extra microsteps, then continue the normal schedule.
+
+model:
+  name: wan22_ti2v_5b_renoise_microsteps
+  path: /data/datasets/fanjiang/.cache/huggingface/hub/models--Wan-AI--Wan2.2-TI2V-5B-Diffusers
+  dtype: bf16
+  device: cuda
+  # Required for the current clean implementation: replay microsteps do not
+  # update UniPC's multi-step solver history.
+  scheduler: euler
+
+generation:
+  resolution: [480, 832]
+  num_frames: 81
+  num_inference_steps: 50
+  guidance_scale: 5.0
+
+renoise_microsteps:
+  index_base: 1
+  trigger_step: 20
+  rollback_to_step: 18
+  extra_microsteps: 5
+  noise_scale: 1.0
+
+prompts:
+  source: ttsd.prompts.worst10:WORST10_BASE_NO_DYNAMIC6_PROMPTS
+
+seeds:
+  # Per-prompt seeds from the prompt module override this default.
+  count: 1
+  base: 0
+
+snapshots:
+  every_n_steps: 5
+  also_keep: [19]
+
+output:
+  root: runs/renoise_microsteps
+  run_id: renoise_worst10_s20_to_s18_x05_001
+  output_type: np
+  save_video: true
+  save_latents: true
