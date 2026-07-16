@@ -63,6 +63,8 @@ ALL_VIDEO_DIMENSIONS: tuple[str, ...] = (
     "overall_consistency",
 )
 
+NORMALIZED_BY_100_DIMENSIONS: set[str] = {"imaging_quality"}
+
 
 def _slug(prompt: str) -> str:
     """VBench keys videos on the prompt-as-filename — keep the filename
@@ -71,6 +73,12 @@ def _slug(prompt: str) -> str:
     s = prompt.strip()
     s = re.sub(r"[/\\\0]", " ", s)
     return s
+
+
+def _normalize_score(dimension: str, score: float) -> float:
+    if dimension in NORMALIZED_BY_100_DIMENSIONS and score > 1.0:
+        return score / 100.0
+    return score
 
 
 def _iter_clips(run_dir: Path) -> Iterable[tuple[dict, Path]]:
@@ -191,7 +199,8 @@ def aggregate_to_csv(
             print(f"[vbench-agg] WARN: unrecognized result shape for {dim}: {type(block)}")
             continue
 
-        for vp, score in per_video:
+        for vp, raw_score in per_video:
+            score = _normalize_score(dim, raw_score)
             stem = Path(vp).stem  # "<prompt_text>-seed<NNNN>"
             m = re.match(r"^(.*)-seed(\d+)$", stem)
             prompt_text = m.group(1) if m else stem

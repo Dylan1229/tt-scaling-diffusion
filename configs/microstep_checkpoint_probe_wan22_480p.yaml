@@ -1,0 +1,67 @@
+# Focused checkpoint probe for local microstep intervention.
+# Variants:
+#   1. Single checkpoint, +5 steps, at every 5-step interval from 10 to 50.
+#   2. Two-checkpoint combinations, +5 steps each, over {10,20,30,40,50}.
+
+model:
+  name: wan22_ti2v_5b
+  path: /data/datasets/fanjiang/.cache/huggingface/hub/models--Wan-AI--Wan2.2-TI2V-5B-Diffusers
+  dtype: bf16
+  device: cuda
+  scheduler: unipc
+
+generation:
+  resolution: [480, 832]
+  num_frames: 81
+  num_inference_steps: 50
+  guidance_scale: 5.0
+
+prompts:
+  source: ttsd.prompts.dev_set:DEV_PROMPTS
+
+seeds:
+  count: 1
+  base: 0
+
+microstep_grid:
+  index_base: 1
+  num_train_timesteps: 1000
+  include_baseline: true
+  anchors: []
+  extra_steps: []
+  min_active_anchors: 1
+  max_active_anchors: 1
+  variants:
+    # Singles, every 5 base steps.
+    - extra_steps_by_step: {10: 5}
+    - extra_steps_by_step: {15: 5}
+    - extra_steps_by_step: {20: 5}
+    - extra_steps_by_step: {25: 5}
+    - extra_steps_by_step: {30: 5}
+    - extra_steps_by_step: {35: 5}
+    - extra_steps_by_step: {40: 5}
+    - extra_steps_by_step: {45: 5}
+    - extra_steps_by_step: {50: 5}
+
+    # Pairwise combinations over {10,20,30,40,50}.
+    - extra_steps_by_step: {10: 5, 20: 5}
+    - extra_steps_by_step: {10: 5, 30: 5}
+    - extra_steps_by_step: {10: 5, 40: 5}
+    - extra_steps_by_step: {10: 5, 50: 5}
+    - extra_steps_by_step: {20: 5, 30: 5}
+    - extra_steps_by_step: {20: 5, 40: 5}
+    - extra_steps_by_step: {20: 5, 50: 5}
+    - extra_steps_by_step: {30: 5, 40: 5}
+    - extra_steps_by_step: {30: 5, 50: 5}
+    - extra_steps_by_step: {40: 5, 50: 5}
+
+snapshots:
+  every_n_steps: 5
+  also_keep: [1, 49]
+
+output:
+  root: runs/microstep_grid
+  run_id: null
+  save_video: true
+  save_latents: false
+  save_meta: true
