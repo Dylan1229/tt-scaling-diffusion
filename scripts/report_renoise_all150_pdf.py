@@ -518,10 +518,34 @@ def build_report(args: argparse.Namespace) -> Path:
         "Fixed Step-10 Renoise + AddSteps",
         "150 paired videos, low-quality rescue analysis, and causal online verifier evaluation",
     )
+    scope_ax = fig.add_axes([0.06, 0.835, 0.88, 0.065])
+    scope_ax.axis("off")
+    scope_ax.add_patch(
+        plt.Rectangle(
+            (0, 0),
+            1,
+            1,
+            facecolor="#fff6df",
+            edgecolor=COLORS["gold"],
+            linewidth=1.2,
+        )
+    )
+    scope_ax.text(
+        0.02,
+        0.5,
+        (
+            "SCOPE: Results apply only to step10 -> rollback step8 -> +5.\n"
+            "They do not answer step20 -> step18 or any other checkpoint."
+        ),
+        fontsize=8.5,
+        weight="bold",
+        color=COLORS["ink"],
+        va="center",
+    )
     _metric_card(
         fig,
         0.06,
-        0.68,
+        0.64,
         0.27,
         0.17,
         label="GLOBAL WIN RATE",
@@ -532,7 +556,7 @@ def build_report(args: argparse.Namespace) -> Path:
     _metric_card(
         fig,
         0.365,
-        0.68,
+        0.64,
         0.27,
         0.17,
         label="GLOBAL WORST 10%",
@@ -543,7 +567,7 @@ def build_report(args: argparse.Namespace) -> Path:
     _metric_card(
         fig,
         0.67,
-        0.68,
+        0.64,
         0.27,
         0.17,
         label="BEST ONLINE GATE",
@@ -551,7 +575,7 @@ def build_report(args: argparse.Namespace) -> Path:
         detail=f"Accepted {int(best_gate['accepted'])}/150 across {int(best_gate['accepted_prompts'])} prompts; conservative 95% low {best_gate['win_rate_conservative_low'] * 100:.1f}%",
         color=COLORS["light_green"],
     )
-    fig.text(0.06, 0.61, "What the data supports", fontsize=13, weight="bold", color=COLORS["ink"])
+    fig.text(0.06, 0.57, "What the data supports", fontsize=13, weight="bold", color=COLORS["ink"])
     conclusions = [
         _global_conclusion(global_row),
         (
@@ -579,7 +603,7 @@ def build_report(args: argparse.Namespace) -> Path:
     ]
     fig.text(
         0.075,
-        0.575,
+        0.535,
         "\n\n".join(f"- {_wrap(item, 88)}" for item in conclusions),
         fontsize=10.1,
         va="top",
@@ -640,8 +664,15 @@ def build_report(args: argparse.Namespace) -> Path:
         "No final VBench, final baseline video, or intervention result enters the verifier.",
         "Validation: leave one prompt out; the decision threshold is chosen inside the training prompts.",
         "Compute cost: replaying steps 8-10 costs three original calls plus five inserted microsteps, for 58 NFE total.",
+        "Scope boundary: step20->18, later checkpoints, other rollback distances, and other microstep counts were not tested here.",
     ]
-    fig.text(0.085, 0.43, "\n\n".join(f"- {item}" for item in roles), fontsize=10.7, va="top")
+    fig.text(
+        0.085,
+        0.43,
+        "\n\n".join(f"- {_wrap(item, 86)}" for item in roles),
+        fontsize=9.7,
+        va="top",
+    )
     pages.append(_save_page(fig, page_dir, page))
     page += 1
 
@@ -653,10 +684,13 @@ def build_report(args: argparse.Namespace) -> Path:
             _global_conclusion(global_row),
         ),
         (
-            "Are Initially Bad Videos Easier to Rescue?",
-            "Global cutoffs, within-prompt ranks, and a cross-dimension coupling check",
+            "Bad-Video Rescue at Step 10",
+            "Only the fixed step10->step8+5 policy; global cutoffs, within-prompt ranks, and coupling checks",
             bad_fig,
-            _bad_video_conclusion(bad_row),
+            (
+                f"For step10->step8+5 only: {_bad_video_conclusion(bad_row)} "
+                "This does not predict whether bottom videos improve under step20->step18."
+            ),
         ),
         (
             "The Effect Is Content-Dependent",
@@ -678,7 +712,7 @@ def build_report(args: argparse.Namespace) -> Path:
     _title(
         fig,
         "Online Verifier: Can Precision Improve?",
-        "All reported predictions are prompt-held-out and causal at the step-10 decision point",
+        "Prompt-held-out causal gating for the fixed step10->step8+5 intervention only",
     )
     ax = fig.add_axes([0.07, 0.53, 0.86, 0.33])
     ax.imshow(plt.imread(verifier_fig))
@@ -801,9 +835,14 @@ def build_report(args: argparse.Namespace) -> Path:
         page += 1
 
     fig = plt.figure(figsize=PAGE_SIZE)
-    _title(fig, "What We Can Defend, and What We Cannot")
+    _title(
+        fig,
+        "What We Can Defend",
+        "Every statement on this page is scoped to the fixed step10->step8+5 intervention",
+    )
     supported = [
         f"The fixed s10->s8+5 policy was tested on 150 matched videos, not only ten hand-picked failures.",
+        "All global, bottom-video, prompt, and verifier results are scoped to this one intervention window.",
         f"Global six-dim win rate: {global_row['win_rate'] * 100:.1f}% with mean delta {global_row['mean_delta']:+.4f}.",
         f"Global bottom-10% win rate: {global_worst_row['win_rate'] * 100:.1f}% with mean delta {global_worst_row['mean_delta']:+.4f}.",
         f"Within-prompt bottom-3/10 win rate: {bad_row['win_rate'] * 100:.1f}% with mean delta {bad_row['mean_delta']:+.4f}.",
@@ -815,9 +854,46 @@ def build_report(args: argparse.Namespace) -> Path:
         "Dynamic Degree was separated from the six-dimensional endpoint.",
         f"Dynamic Degree changed in {dynamic_losses + dynamic_gains}/150 videos ({dynamic_losses} loss, {dynamic_gains} gain).",
     ]
+    fig.add_artist(
+        plt.Rectangle(
+            (0.07, 0.76),
+            0.86,
+            0.08,
+            transform=fig.transFigure,
+            facecolor="#fff6df",
+            edgecolor=COLORS["gold"],
+            linewidth=1.2,
+        )
+    )
+    fig.text(
+        0.09,
+        0.80,
+        "The bottom-video result is not a claim about step20, step30, or any later intervention.",
+        fontsize=10.5,
+        weight="bold",
+        color=COLORS["ink"],
+        va="center",
+    )
+    fig.text(0.07, 0.69, "Supported", fontsize=14, weight="bold", color=COLORS["green"])
+    fig.text(
+        0.085,
+        0.65,
+        "\n\n".join(f"- {_wrap(item, 84)}" for item in supported),
+        fontsize=10.2,
+        va="top",
+    )
+    pages.append(_save_page(fig, page_dir, page))
+    page += 1
+
+    fig = plt.figure(figsize=PAGE_SIZE)
+    _title(
+        fig,
+        "What Remains Unknown",
+        "These questions require new intervention runs rather than reinterpretation of the step-10 data",
+    )
     limits = [
         "The dataset contains 15 prompts x 10 seeds; prompt-held-out validation helps, but this is not a broad benchmark.",
-        "Only one intervention location and rollback distance were tested in this report.",
+        "Only step10->step8+5 was tested. This report cannot determine whether bottom videos improve at step20->step18 or any later checkpoint.",
         "VBench deltas are proxy outcomes. A blind human pairwise study is still required before claiming perceptual improvement.",
         "A verifier with a small accepted set cannot guarantee success; report its accepted count and uncertainty interval.",
         "The exploratory top-k precision curve cannot be used as a deployment claim until its threshold is frozen and tested on new prompts.",
@@ -825,10 +901,14 @@ def build_report(args: argparse.Namespace) -> Path:
         "DINO feature families were informed by earlier work on this dev set, so a new external prompt set is still required.",
         "Benchmark axis labels are available online here, but deployment needs a prompt classifier or an axis-free gate.",
     ]
-    fig.text(0.07, 0.84, "Supported", fontsize=14, weight="bold", color=COLORS["green"])
-    fig.text(0.085, 0.80, "\n\n".join(f"- {_wrap(item, 84)}" for item in supported), fontsize=10.0, va="top")
-    fig.text(0.07, 0.43, "Limitations", fontsize=14, weight="bold", color=COLORS["red"])
-    fig.text(0.085, 0.39, "\n\n".join(f"- {_wrap(item, 84)}" for item in limits), fontsize=10.5, va="top")
+    fig.text(0.07, 0.84, "Not established by this report", fontsize=14, weight="bold", color=COLORS["red"])
+    fig.text(
+        0.085,
+        0.79,
+        "\n\n".join(f"- {_wrap(item, 84)}" for item in limits),
+        fontsize=10.3,
+        va="top",
+    )
     fig.text(
         0.07,
         0.07,
