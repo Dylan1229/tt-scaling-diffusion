@@ -2,8 +2,8 @@
 
 Given per-seed patch features in shape (T, N_sub, P, D), compute a small
 collection of conceptually-clean single-number properties and report
-within-prompt Spearman / winner-match against avg_vbench_z and each individual
-VBench subscore.
+within-prompt Spearman / winner-match against vbench_quality, dynamic_degree, and each
+individual VBench subscore.
 
 Properties probed (each one is a single scalar):
   - PATCH-MEAN-COS   : mean cos(patch_mean[k], patch_mean[k+1]) over (i, k)
@@ -34,17 +34,23 @@ import numpy as np
 from ttsd.runners.utilities.ranking import _rankdata
 from ttsd.runners.utilities.run_layout import resolve_run_id, stage_output_dir
 from ttsd.runners.utilities.seed_vbench_loaders import (
+    MIN_STRATUM_SEEDS,
     SUBSCORES,
     _iter_seed_dirs,
     _load_vbench_rows,
     _seed_idx_from_name,
+    annotate_vbench_targets,
+    cell_groups,
+    load_legacy_avg_vbench_z,
 )
 
 PATCH_FILE = "posterior_mean_patch_features.npy"
 CLS_FILE = "posterior_mean_features.npy"
 
-# Compact column headers for the per-target report table (avg_vbench_z + the 6 subscores).
+# Compact column headers for the per-target report table.
 SHORT_LABEL = {
+    "vbench_quality": "quality",
+    "dynamic_degree": "dyn",
     "avg_vbench_z": "avgZ",
     "subject_consistency": "subj",
     "background_consistency": "bg",
@@ -53,6 +59,10 @@ SHORT_LABEL = {
     "imaging_quality": "imag",
     "overall_consistency": "overall",
 }
+
+# Targets whose within-prompt argmax is meaningful. `dynamic_degree` is boolean, so its
+# argmax picks an arbitrary member of the winning tie.
+_NO_WINNER_MATCH = {"dynamic_degree"}
 
 
 def _within(score: np.ndarray, y: np.ndarray, prompt_to_idx: dict[str, list[int]]) -> float:
@@ -307,71 +317,110 @@ def main() -> None:
         del F
     print(f"[feature_vbench_correlation] loaded {len(records)} seeds", file=sys.stderr)
 
-    # Build avg_vbench_z (per-prompt z-normalize then average subscores)
-    grouped = defaultdict(list)
-    for r in records:
-        grouped[r["prompt_id"]].append(r)
-    for group in grouped.values():
-        for metric in SUBSCORES:
-            vs = np.array([float(g[metric]) for g in group])
-            mu, sd = vs.mean(), vs.std(ddof=0)
-            zs = np.zeros_like(vs) if sd == 0 else (vs - mu) / sd
-            for g, z in zip(group, zs):
-                g[f"z_{metric}"] = float(z)
-        for g in group:
-            g["avg_vbench_z"] = float(np.mean([g[f"z_{m}"] for m in SUBSCORES]))
+    annotate_vbench_targets(records)
 
     prompt_to_idx: dict[str, list[int]] = defaultdict(list)
     for i, r in enumerate(records):
         prompt_to_idx[r["prompt_id"]].append(i)
     n_prompts = len(prompt_to_idx)
 
-    # Align each metric against avg_vbench_z AND every individual subscore. Within-prompt
-    # Spearman is rank-based, so the raw subscore gives the same value as its z-normalized
-    # version; only avg_vbench_z needs the z-norm computed above.
-    targets = ["avg_vbench_z"] + SUBSCORES
+    # Align each metric against vbench_quality AND every individual subscore. Within-prompt
+    # Spearman is rank-based, so a target's raw scale never matters here.
+    targets = ["vbench_quality"] + SUBSCORES
+    have_dyn = all("dynamic_degree" in r for r in records)
+    if have_dyn:
+        targets.append("dynamic_degree")
+    else:
+        print("[feature_vbench_correlation] no dynamic_degree scores; skipping that target",
+              file=sys.stderr)
+
+    legacy_z = load_legacy_avg_vbench_z(args.vbench_long_csv)
+    if legacy_z:
+        for r in records:
+            r["avg_vbench_z"] = legacy_z[(r["prompt_id"], r["seed_idx"])]
+        targets.append("avg_vbench_z")
+
     target_arr = {t: np.array([float(r[t]) for r in records]) for t in targets}
 
-    metric_keys = [k for k in records[0].keys() if k.startswith(("patch_", "finalpost_"))]
+    # Re-group by (prompt, dynamic_degree) so motion is held fixed. `dynamic_degree` is constant
+    # inside a cell, so it drops out as a target there.
+    strat_targets = [t for t in targets if t != "dynamic_degree"]
+    pti_dyn = {f"dyn{d}": cell_groups(records, d) for d in (0, 1)} if have_dyn else {}
+    dyn_total = ({d: sum(1 for r in records if int(float(r["dynamic_degree"])) == d)
+                  for d in (0, 1)} if have_dyn else {})
 
-    def stats_for(metric_signed, arrs, pti):
-        return {t: (_within(metric_signed, arrs[t], pti), _winner_match(metric_signed, arrs[t], pti))
-                for t in targets}
+    metric_keys = [k for k in records[0].keys() if k.startswith(("patch_", "finalpost_"))]
+    metric_col = {k: np.array([r[k] for r in records], float) for k in metric_keys}
+
+    def stats_for(metric_signed, arrs, pti, tgts):
+        return {t: (_within(metric_signed, arrs[t], pti),
+                    None if t in _NO_WINNER_MATCH else _winner_match(metric_signed, arrs[t], pti))
+                for t in tgts}
 
     rows = []  # each: (metric, sign, {target: (sp_within, winner_match)})
     for k in metric_keys:
-        s = np.array([r[k] for r in records], float)
         for sign in (1, -1):
-            rows.append((k, sign, stats_for(sign * s, target_arr, prompt_to_idx)))
-    rows.sort(key=lambda r: -abs(r[2]["avg_vbench_z"][0]))
+            rows.append((k, sign, stats_for(sign * metric_col[k], target_arr, prompt_to_idx, targets)))
+    rows.sort(key=lambda r: -abs(r[2]["vbench_quality"][0]))
 
-    def render_table(table_rows, n):
+    strat_stats = {
+        lbl: {(k, sign): stats_for(sign * metric_col[k], target_arr, pti, strat_targets)
+              for k in metric_keys for sign in (1, -1)}
+        for lbl, pti in pti_dyn.items()
+    }
+
+    def render_table(table_rows, n, tgts):
         header = (f"{'metric':<44} {'sgn':>3} "
-                  + " ".join(f"{SHORT_LABEL[t]:>9}" for t in targets)
-                  + f"  {'WM_avgZ':>8}")
+                  + " ".join(f"{SHORT_LABEL[t]:>9}" for t in tgts)
+                  + f"  {'WM_qual':>8}")
         lines = [header, "-" * len(header)]
         for k, sign, st in table_rows:
-            sps = " ".join(f"{st[t][0]:>+9.4f}" for t in targets)
-            wm = st["avg_vbench_z"][1]
+            sps = " ".join(f"{st[t][0]:>+9.4f}" for t in tgts)
+            wm = st["vbench_quality"][1]
             lines.append(f"{k:<44} {sign:>3} {sps}  {f'{wm}/{n}':>8}")
         return lines
 
     report: list[str] = []
     report.append("within-prompt Spearman of each metric vs each target "
-                  "(avgZ = avg_vbench_z; columns are signed; WM_avgZ = winner-match vs avg_vbench_z)")
-    report.extend(render_table(rows, n_prompts))
+                  "(columns are signed; WM_qual = winner-match vs vbench_quality)")
+    report.extend(render_table(rows, n_prompts, targets))
+
+    # Same statistic, recomputed inside (prompt, dynamic_degree) cells. vbench_quality rewards
+    # stillness, so an all-seeds correlation mixes "this seed is better" with "it moves less".
+    pretty = {"dyn0": "static", "dyn1": "moving"}
+    for lbl, pti in pti_dyn.items():
+        n_cells = len(pti)
+        n_kept = sum(len(v) for v in pti.values())
+        n_dropped = dyn_total[int(lbl[-1])] - n_kept
+        strat_rows = [(k, sign, strat_stats[lbl][(k, sign)]) for k, sign, _ in rows]
+        report.append("")
+        report.append(f"--- stratum {lbl} ({pretty[lbl]}): {n_cells} cells, {n_kept} clips "
+                      f"(dropped {n_dropped} in cells with <{MIN_STRATUM_SEEDS} seeds; "
+                      f"dynamic_degree is constant here so it is not a target) ---")
+        report.extend(render_table(strat_rows, n_cells, strat_targets))
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     with (args.output_dir / "correlation_table.csv").open("w", newline="") as h:
         cols = ["metric", "sign", "n_prompts"]
         for t in targets:
             cols += [f"sp_{t}", f"wm_{t}"]
+        if have_dyn:
+            cols += ["n_cells_dyn0", "n_cells_dyn1"]
+            for t in strat_targets:
+                cols += [f"sp_{t}_dyn0", f"wm_{t}_dyn0", f"sp_{t}_dyn1", f"wm_{t}_dyn1"]
         h.write(",".join(cols) + "\n")
+        n_cells = {lbl: str(len(pti)) for lbl, pti in pti_dyn.items()}
         for k, sign, st in rows:
             vals = [k, str(sign), str(n_prompts)]
             for t in targets:
                 sp, wm = st[t]
-                vals += [f"{sp:.6f}", str(wm)]
+                vals += [f"{sp:.6f}", "" if wm is None else str(wm)]
+            if have_dyn:
+                vals += [n_cells["dyn0"], n_cells["dyn1"]]
+                for t in strat_targets:
+                    sp0, wm0 = strat_stats["dyn0"][(k, sign)][t]
+                    sp1, wm1 = strat_stats["dyn1"][(k, sign)][t]
+                    vals += [f"{sp0:.6f}", str(wm0), f"{sp1:.6f}", str(wm1)]
             h.write(",".join(vals) + "\n")
 
     sizes = sorted({len(ps) for ps in prompt_to_idx.values()})
@@ -385,11 +434,28 @@ def main() -> None:
             n_sub = len(pti_sub)
             arr_sub = {t: np.array([float(r[t]) for r in bucket_recs]) for t in targets}
             metric_sub = {k: np.array([r[k] for r in bucket_recs], float) for k in metric_keys}
-            bucket_rows = [(k, sign, stats_for(sign * metric_sub[k], arr_sub, pti_sub))
+            bucket_rows = [(k, sign, stats_for(sign * metric_sub[k], arr_sub, pti_sub, targets))
                            for k, sign in pooled_order]
             report.append("")
             report.append(f"--- bucket n={sz} ({n_sub} prompts) ---")
-            report.extend(render_table(bucket_rows, n_sub))
+            report.extend(render_table(bucket_rows, n_sub, targets))
+
+    # How the targets relate to each other. If vbench_quality tracks dynamic_degree
+    # negatively, a higher score means a stiller video, not a better one.
+    diag = [t for t in ("vbench_quality", "dynamic_degree", "overall_consistency", "avg_vbench_z")
+            if t in target_arr]
+    report.append("")
+    report.append("target-vs-target within-prompt Spearman")
+    if "dynamic_degree" in target_arr:
+        n_dyn = sum(len({records[i]["dynamic_degree"] for i in ps}) > 1
+                    for ps in prompt_to_idx.values() if len(ps) >= 2)
+        report.append(f"(dynamic_degree varies within {n_dyn}/{n_prompts} prompts; "
+                      "prompts where it is constant are skipped)")
+    report.append(f"{'':<10}" + " ".join(f"{SHORT_LABEL[t]:>9}" for t in diag))
+    for a in diag:
+        cells = " ".join(f"{_within(target_arr[a], target_arr[b], prompt_to_idx):>+9.4f}"
+                         for b in diag)
+        report.append(f"{SHORT_LABEL[a]:<10}{cells}")
 
     (args.output_dir / "correlation_report.txt").write_text("\n".join(report) + "\n")
     print("Wrote", args.output_dir / "correlation_table.csv", file=sys.stderr)

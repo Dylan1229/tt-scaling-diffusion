@@ -1,8 +1,9 @@
-"""Per-prompt good-vs-bad velocity-direction heatmaps in patch-mean space.
+"""Good-vs-bad velocity-direction heatmaps in patch-mean space, per motion stratum.
 
-For each prompt in sweep_v2, picks the best and worst seed by within-prompt
-`avg_vbench_z` (per-prompt z-normalized mean of the 6 VBench subscores), then
-produces a 2x2 figure:
+For each (prompt, dynamic_degree) stratum, picks the best and worst seed by `vbench_quality`
+and produces a 2x2 figure. A prompt whose seeds all move yields one figure; a prompt whose
+seeds differ yields two. Best and worst are never drawn from different strata, because
+`vbench_quality` rewards stillness and the contrast would then be motion, not quality.
 
     +------------------------------+------------------------------+
     | step-adj cos: good seed      | step-adj cos: bad seed       |
@@ -41,10 +42,12 @@ import numpy as np
 
 from ttsd.runners.utilities.run_layout import resolve_run_id, stage_output_dir
 from ttsd.runners.utilities.seed_vbench_loaders import (
-    SUBSCORES,
     _iter_seed_dirs,
     _load_vbench_rows,
     _seed_idx_from_name,
+    annotate_vbench_targets,
+    best_worst,
+    prompt_strata,
 )
 
 PATCH_FILE = "posterior_mean_patch_features.npy"
@@ -138,74 +141,79 @@ def main() -> None:
         records.append(rec)
         del F
 
+    annotate_vbench_targets(records)
+
     grouped: dict[str, list[dict[str, object]]] = defaultdict(list)
     for r in records:
         grouped[str(r["prompt_id"])].append(r)
-    for group in grouped.values():
-        for metric in SUBSCORES:
-            vs = np.array([float(g[metric]) for g in group])
-            mu, sd = vs.mean(), vs.std(ddof=0)
-            zs = np.zeros_like(vs) if sd == 0 else (vs - mu) / sd
-            for g, z in zip(group, zs):
-                g[f"z_{metric}"] = float(z)
-        for g in group:
-            g["avg_vbench_z"] = float(np.mean([g[f"z_{m}"] for m in SUBSCORES]))
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
     cell_report: list[str] = []
-    cell_report.append(f"[velocity_heatmap_cells] {len(grouped)} prompts | good+bad seed each | "
-                       f"D and L | shape 10 steps x 20 frame pairs")
+    cell_report.append("[velocity_heatmap_cells] one block per (prompt, dynamic_degree) stratum | "
+                       "good+bad seed drawn from within that stratum | D and L | 10 steps x 20 frame pairs")
     cell_report.append("[velocity_heatmap_cells] D[s,k] = <v_{s-1,k}, v_{s,k}>")
     cell_report.append("[velocity_heatmap_cells] L[s,k] = (1/s) sum_{r=0}^{s-1} <v_{r,k}, v_{s,k}>")
     cell_report.append("")
 
+    n_figs = 0
     for prompt_id in sorted(grouped.keys()):
-        group = grouped[prompt_id]
-        good = max(group, key=lambda r: r["avg_vbench_z"])
-        bad = min(group, key=lambda r: r["avg_vbench_z"])
-        D_good, L_good = _heatmaps_from_v(good["v"])
-        D_bad, L_bad = _heatmaps_from_v(bad["v"])
+        strata = prompt_strata(grouped[prompt_id])
+        if not strata:
+            print(f"[velocity_heatmaps] SKIP {prompt_id}: no stratum with 2 seeds", file=sys.stderr)
+            continue
 
-        d_vmin = float(min(D_good.min(), D_bad.min()))
-        d_vmax = float(max(D_good.max(), D_bad.max()))
-        l_vmin = float(min(L_good.min(), L_bad.min()))
-        l_vmax = float(max(L_good.max(), L_bad.max()))
+        # One figure per (prompt, dynamic_degree) stratum: a prompt whose seeds all move gets
+        # one, a prompt whose seeds differ gets two. Best and worst are never drawn from
+        # different strata, so the contrast is quality rather than motion.
+        for dyn, stratum in strata:
+            good, bad = best_worst(stratum)
+            stratum_tag = f"dyn={dyn} n={len(stratum)}"
+            gi, bi = int(good["seed_idx"]), int(bad["seed_idx"])
+            n_figs += 1
 
-        fig, axes = plt.subplots(2, 2, figsize=(9, 6.4), constrained_layout=True)
-        good_tag = f"good seed{int(good['seed_idx']):04d} (z={good['avg_vbench_z']:+.2f})"
-        bad_tag = f"bad seed{int(bad['seed_idx']):04d} (z={bad['avg_vbench_z']:+.2f})"
+            D_good, L_good = _heatmaps_from_v(good["v"])
+            D_bad, L_bad = _heatmaps_from_v(bad["v"])
+            d_vmin = float(min(D_good.min(), D_bad.min()))
+            d_vmax = float(max(D_good.max(), D_bad.max()))
+            l_vmin = float(min(L_good.min(), L_bad.min()))
+            l_vmax = float(max(L_good.max(), L_bad.max()))
 
-        im_d = _imshow(axes[0, 0], D_good, d_vmin, d_vmax, f"step-adj: {good_tag}")
-        _imshow(axes[0, 1], D_bad, d_vmin, d_vmax, f"step-adj: {bad_tag}")
-        im_l = _imshow(axes[1, 0], L_good, l_vmin, l_vmax, f"prefix-lock: {good_tag}")
-        _imshow(axes[1, 1], L_bad, l_vmin, l_vmax, f"prefix-lock: {bad_tag}")
+            fig, axes = plt.subplots(2, 2, figsize=(9, 6.4), constrained_layout=True)
+            good_tag = f"good {prompt_id} seed{gi:04d} (q={good['vbench_quality']:.3f})"
+            bad_tag = f"bad {prompt_id} seed{bi:04d} (q={bad['vbench_quality']:.3f})"
 
-        fig.colorbar(im_d, ax=axes[0, :].tolist(), fraction=0.03, pad=0.02,
-                     label=r"$\langle v_{s-1,k},\ v_{s,k}\rangle$")
-        fig.colorbar(im_l, ax=axes[1, :].tolist(), fraction=0.03, pad=0.02,
-                     label=r"$\frac{1}{s}\sum_{r<s}\langle v_{r,k},\ v_{s,k}\rangle$")
-        fig.suptitle(f"Patch-mean velocity direction — prompt {prompt_id}", fontsize=11)
-        fig.savefig(args.output_dir / f"fig_{prompt_id}.png", dpi=140)
-        plt.close(fig)
+            im_d = _imshow(axes[0, 0], D_good, d_vmin, d_vmax, f"step-adj: {good_tag}")
+            _imshow(axes[0, 1], D_bad, d_vmin, d_vmax, f"step-adj: {bad_tag}")
+            im_l = _imshow(axes[1, 0], L_good, l_vmin, l_vmax, f"prefix-lock: {good_tag}")
+            _imshow(axes[1, 1], L_bad, l_vmin, l_vmax, f"prefix-lock: {bad_tag}")
 
-        gi, bi = int(good["seed_idx"]), int(bad["seed_idx"])
-        cell_report.append(f"==== prompt {prompt_id} ====")
-        cell_report.append(f"good = seed{gi:04d} (avg_vbench_z = {good['avg_vbench_z']:+.4f})")
-        cell_report.append(f"bad  = seed{bi:04d} (avg_vbench_z = {bad['avg_vbench_z']:+.4f})")
-        cell_report.append("")
-        for tag, M in [(f"good seed{gi:04d} | D step-adjacent", D_good),
-                       (f"good seed{gi:04d} | L prefix-lock", L_good),
-                       (f"bad seed{bi:04d} | D step-adjacent", D_bad),
-                       (f"bad seed{bi:04d} | L prefix-lock", L_bad)]:
-            cell_report.append(f"-- {tag} --")
-            cell_report.append(_format_matrix(M))
-        cell_report.append("")
+            fig.colorbar(im_d, ax=axes[0, :].tolist(), fraction=0.03, pad=0.02,
+                         label=r"$\langle v_{s-1,k},\ v_{s,k}\rangle$")
+            fig.colorbar(im_l, ax=axes[1, :].tolist(), fraction=0.03, pad=0.02,
+                         label=r"$\frac{1}{s}\sum_{r<s}\langle v_{r,k},\ v_{s,k}\rangle$")
+            fig.suptitle(f"Patch-mean velocity direction — prompt {prompt_id}  [{stratum_tag}]  "
+                         f"good seed{gi:04d} vs bad seed{bi:04d}", fontsize=11)
+            fig.savefig(args.output_dir / f"fig_{prompt_id}_dyn{dyn}.png", dpi=140)
+            plt.close(fig)
 
-        print(f"[velocity_heatmaps] {prompt_id}: "
-              f"good=seed{gi:04d} z={good['avg_vbench_z']:+.2f}  "
-              f"bad=seed{bi:04d} z={bad['avg_vbench_z']:+.2f}", file=sys.stderr)
+            cell_report.append(f"==== prompt {prompt_id} ({stratum_tag}) ====")
+            cell_report.append(f"good = seed{gi:04d} (vbench_quality = {good['vbench_quality']:.4f})")
+            cell_report.append(f"bad  = seed{bi:04d} (vbench_quality = {bad['vbench_quality']:.4f})")
+            cell_report.append("")
+            for tag, M in [(f"good {prompt_id} seed{gi:04d} | D step-adjacent", D_good),
+                           (f"good {prompt_id} seed{gi:04d} | L prefix-lock", L_good),
+                           (f"bad {prompt_id} seed{bi:04d} | D step-adjacent", D_bad),
+                           (f"bad {prompt_id} seed{bi:04d} | L prefix-lock", L_bad)]:
+                cell_report.append(f"-- {tag} --")
+                cell_report.append(_format_matrix(M))
+            cell_report.append("")
 
+            print(f"[velocity_heatmaps] {prompt_id} [{stratum_tag}]: "
+                  f"good=seed{gi:04d} q={good['vbench_quality']:.3f}  "
+                  f"bad=seed{bi:04d} q={bad['vbench_quality']:.3f}", file=sys.stderr)
+
+    print(f"[velocity_heatmaps] wrote {n_figs} figures over {len(grouped)} prompts", file=sys.stderr)
     (args.output_dir / "velocity_heatmap_cells.txt").write_text("\n".join(cell_report) + "\n")
     print("Wrote", args.output_dir / "velocity_heatmap_cells.txt", file=sys.stderr)
 

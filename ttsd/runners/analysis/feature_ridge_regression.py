@@ -2,8 +2,8 @@
 
 For each seed we extract a small fixed feature vector from `frame_neighbor`
 and `posterior_neighbor` matrices. Then for each held-out prompt we fit a
-ridge regression of features -> per-seed avg_vbench_z on the other 14 prompts
-and predict the held-out prompt's seed scores. We collect those predictions
+ridge regression of features -> per-seed prompt-centered vbench_quality on the
+other prompts and predict the held-out prompt's seed scores. We collect those predictions
 across all prompts and evaluate alignment with VBench exactly like the
 existing grid search.
 
@@ -29,6 +29,8 @@ from ttsd.runners.utilities.seed_vbench_loaders import (
     _iter_seed_dirs,
     _load_vbench_rows,
     _seed_idx_from_name,
+    annotate_vbench_targets,
+    cell_groups_rows,
 )
 
 FRAME_FILE = "posterior_mean_frame_neighbor_similarity.npy"
@@ -311,20 +313,21 @@ def _load_seed_records(heatmap_run_root: Path,
         record["feature_names"] = names
         seed_records.append(record)
 
+    annotate_vbench_targets(seed_records)
+
+    # Subtract each prompt's mean quality. Roughly two thirds of vbench_quality's
+    # variance is prompt difficulty, which the features cannot explain on a held-out
+    # prompt, so fitting the raw score wastes capacity on it. This is a modeling choice
+    # local to the regression — it keeps absolute units and does not divide by a
+    # standard deviation, so it is not the retired avg_vbench_z. The reported metrics
+    # are rank-based within prompt and so are unaffected either way.
     grouped = defaultdict(list)
     for record in seed_records:
         grouped[str(record["prompt_id"])].append(record)
-    for _, group in grouped.items():
-        for metric in SUBSCORES:
-            values = np.array([float(row[metric]) for row in group], dtype=float)
-            mean = values.mean()
-            std = values.std(ddof=0)
-            z_values = np.zeros_like(values) if std == 0 else (values - mean) / std
-            for row, z_value in zip(group, z_values):
-                row[f"z_{metric}"] = float(z_value)
+    for group in grouped.values():
+        mean = float(np.mean([row["vbench_quality"] for row in group]))
         for row in group:
-            row["avg_vbench_z"] = float(np.mean([row[f"z_{metric}"] for metric in SUBSCORES]))
-            row["avg_vbench_raw"] = float(np.mean([float(row[metric]) for metric in SUBSCORES]))
+            row["vbench_quality_centered"] = float(row["vbench_quality"]) - mean
     return seed_records
 
 
@@ -389,15 +392,21 @@ def _evaluate_predictions(seed_records: list[dict[str, object]],
             "seed_idx": row["seed_idx"],
             "score_value": float(pred),
         }
-        for metric in SUBSCORES + ["avg_vbench_z", "avg_vbench_raw"]:
+        for metric in SUBSCORES + ["vbench_quality", "vbench_quality_centered"]:
             c[metric] = float(row[metric])
+        if "dynamic_degree" in row:
+            c["dynamic_degree"] = float(row["dynamic_degree"])
         cand.append(c)
         by_prompt[str(row["prompt_id"])].append(c)
 
     summary: dict[str, object] = {}
     score_values = np.array([c["score_value"] for c in cand], dtype=float)
+    # Regroup the SAME leave-one-prompt-out predictions by (prompt, dynamic_degree). The fit is
+    # untouched: LOPO holds out whole prompts, and a cell is a subset of one.
+    stratify = all("dynamic_degree" in c for c in cand)
+    cells_by_dyn = {d: cell_groups_rows(cand, d) for d in (0, 1)} if stratify else {}
     sizes = sorted({len(g) for g in by_prompt.values()})
-    for metric in SUBSCORES + ["avg_vbench_z", "avg_vbench_raw"]:
+    for metric in SUBSCORES + ["vbench_quality", "vbench_quality_centered"]:
         metric_values = np.array([c[metric] for c in cand], dtype=float)
         if np.std(score_values) == 0 or np.std(metric_values) == 0:
             pearson = spearman = float("nan")
@@ -453,12 +462,18 @@ def _evaluate_predictions(seed_records: list[dict[str, object]],
             summary[f"{metric}_top3_hit_n{sz}"] = b["top3_hit"]
             summary[f"{metric}_top5_contains_best_n{sz}"] = b["top5_contains_best"]
             summary[f"{metric}_top5_overlap_rate_n{sz}"] = b["top5_overlap_rate"]
+        for d in (0, 1):
+            st = _alignment_stats(cells_by_dyn[d], metric) if stratify else {}
+            summary[f"n_cells_dyn{d}"] = st.get("n_prompts", 0)
+            for stat in ("prompt_mean_spearman", "winner_match", "winner_match_rate",
+                         "top3_hit", "top5_contains_best", "top5_overlap_rate"):
+                summary[f"{metric}_{stat}_dyn{d}"] = st.get(stat, float("nan"))
     return summary
 
 
 def _run_loocv(seed_records: list[dict[str, object]], alpha: float,
                feature_idx: list[int] | None = None,
-               target: str = "avg_vbench_z",
+               target: str = "vbench_quality_centered",
                prompt_residualize: bool = False) -> list[float]:
     prompts = sorted({r["prompt_id"] for r in seed_records})
     predictions = [0.0] * len(seed_records)
@@ -513,7 +528,7 @@ def main() -> None:
     parser.add_argument("--output-dir", type=Path, default=None)
     parser.add_argument("--alphas", type=str, default="0.03,0.1,0.3,1,3,10,30,100")
     parser.add_argument("--targets", type=str,
-                        default="avg_vbench_z,subject_consistency")
+                        default="vbench_quality_centered,subject_consistency")
     parser.add_argument("--run-id", type=str, default=None,
                         help="Fill unset input roots from runs/<stage>/<run-id>.")
     args = parser.parse_args()
@@ -547,9 +562,9 @@ def main() -> None:
                 tag = f"ridge_full_{res_tag}_a{alpha}_train_{target}"
                 summary["score_name"] = tag
                 rows.append(summary)
-                sp = summary["avg_vbench_z_prompt_mean_spearman"]
-                wm = summary["avg_vbench_z_winner_match"]
-                ov = summary["avg_vbench_z_top5_overlap_rate"]
+                sp = summary["vbench_quality_centered_prompt_mean_spearman"]
+                wm = summary["vbench_quality_centered_winner_match"]
+                ov = summary["vbench_quality_centered_top5_overlap_rate"]
                 np_ = summary.get("n_prompts", "?")
                 if sp > best["sp"]:
                     best["sp"] = sp; best["row"] = summary
@@ -735,9 +750,9 @@ def main() -> None:
                     tag = f"ridge_{name}_{res_tag}_a{alpha}_train_{target}"
                     summary["score_name"] = tag
                     rows.append(summary)
-                    sp = summary["avg_vbench_z_prompt_mean_spearman"]
-                    wm = summary["avg_vbench_z_winner_match"]
-                    ov = summary["avg_vbench_z_top5_overlap_rate"]
+                    sp = summary["vbench_quality_centered_prompt_mean_spearman"]
+                    wm = summary["vbench_quality_centered_winner_match"]
+                    ov = summary["vbench_quality_centered_top5_overlap_rate"]
                     np_ = summary.get("n_prompts", "?")
                     if sp > best["sp"]:
                         best["sp"] = sp; best["row"] = summary
@@ -761,43 +776,43 @@ def main() -> None:
         f"Total configs evaluated: {len(rows)}",
         f"Number of prompts: {n_prompts}",
         "",
-        "## Best by avg_vbench_z prompt-mean Spearman",
+        "## Best by vbench_quality_centered prompt-mean Spearman",
         f"- name: `{sp_row['score_name']}`",
-        f"- spearman = {sp_row['avg_vbench_z_prompt_mean_spearman']:.4f}",
-        f"- winner   = {sp_row['avg_vbench_z_winner_match']}/{n_prompts}",
-        f"- top5_overlap = {sp_row['avg_vbench_z_top5_overlap_rate']:.4f}",
+        f"- spearman = {sp_row['vbench_quality_centered_prompt_mean_spearman']:.4f}",
+        f"- winner   = {sp_row['vbench_quality_centered_winner_match']}/{n_prompts}",
+        f"- top5_overlap = {sp_row['vbench_quality_centered_top5_overlap_rate']:.4f}",
         f"- subject prompt-mean spearman = {sp_row['subject_consistency_prompt_mean_spearman']:.4f}",
         "",
-        "## Best by avg_vbench_z winner_match",
+        "## Best by vbench_quality_centered winner_match",
         f"- name: `{wm_row['score_name']}`",
-        f"- winner   = {wm_row['avg_vbench_z_winner_match']}/{n_prompts}",
-        f"- spearman = {wm_row['avg_vbench_z_prompt_mean_spearman']:.4f}",
-        f"- top5_overlap = {wm_row['avg_vbench_z_top5_overlap_rate']:.4f}",
+        f"- winner   = {wm_row['vbench_quality_centered_winner_match']}/{n_prompts}",
+        f"- spearman = {wm_row['vbench_quality_centered_prompt_mean_spearman']:.4f}",
+        f"- top5_overlap = {wm_row['vbench_quality_centered_top5_overlap_rate']:.4f}",
         "",
-        "## Top 15 by avg_vbench_z prompt-mean Spearman",
+        "## Top 15 by vbench_quality_centered prompt-mean Spearman",
         "",
         "| name | spearman | winner | top5_overlap | subj_sp |",
         "| --- | ---: | ---: | ---: | ---: |",
     ]
-    top15 = sorted(rows, key=lambda r: r["avg_vbench_z_prompt_mean_spearman"], reverse=True)[:15]
+    top15 = sorted(rows, key=lambda r: r["vbench_quality_centered_prompt_mean_spearman"], reverse=True)[:15]
     for r in top15:
         md_lines.append(
-            f"| `{r['score_name']}` | {r['avg_vbench_z_prompt_mean_spearman']:.4f} | "
-            f"{r['avg_vbench_z_winner_match']} | {r['avg_vbench_z_top5_overlap_rate']:.4f} | "
+            f"| `{r['score_name']}` | {r['vbench_quality_centered_prompt_mean_spearman']:.4f} | "
+            f"{r['vbench_quality_centered_winner_match']} | {r['vbench_quality_centered_top5_overlap_rate']:.4f} | "
             f"{r['subject_consistency_prompt_mean_spearman']:.4f} |"
         )
     md_lines.append("")
-    md_lines.append("## Top 15 by avg_vbench_z winner_match")
+    md_lines.append("## Top 15 by vbench_quality_centered winner_match")
     md_lines.append("")
     md_lines.append("| name | winner | spearman | top5_overlap | subj_sp |")
     md_lines.append("| --- | ---: | ---: | ---: | ---: |")
-    top15w = sorted(rows, key=lambda r: (r["avg_vbench_z_winner_match"], r["avg_vbench_z_prompt_mean_spearman"]),
+    top15w = sorted(rows, key=lambda r: (r["vbench_quality_centered_winner_match"], r["vbench_quality_centered_prompt_mean_spearman"]),
                     reverse=True)[:15]
     for r in top15w:
         md_lines.append(
-            f"| `{r['score_name']}` | {r['avg_vbench_z_winner_match']} | "
-            f"{r['avg_vbench_z_prompt_mean_spearman']:.4f} | "
-            f"{r['avg_vbench_z_top5_overlap_rate']:.4f} | "
+            f"| `{r['score_name']}` | {r['vbench_quality_centered_winner_match']} | "
+            f"{r['vbench_quality_centered_prompt_mean_spearman']:.4f} | "
+            f"{r['vbench_quality_centered_top5_overlap_rate']:.4f} | "
             f"{r['subject_consistency_prompt_mean_spearman']:.4f} |"
         )
     (output_dir / "ridge_feature_summary.md").write_text("\n".join(md_lines))
