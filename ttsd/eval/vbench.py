@@ -135,6 +135,18 @@ def _slug(prompt: str) -> str:
     return s
 
 
+def parse_staged_video_stem(stem: str) -> tuple[str, int]:
+    """Recover prompt and raw seed from current and legacy staging names."""
+
+    current = re.match(r"^(.*)-seed(\d+)$", stem)
+    if current:
+        return current.group(1), int(current.group(2))
+    legacy = re.match(r"^(.*)-(\d+)$", stem)
+    if legacy:
+        return legacy.group(1), int(legacy.group(2))
+    return stem, -1
+
+
 def _iter_clips(run_dir: Path) -> Iterable[tuple[dict, Path]]:
     for prompt_dir in sorted(run_dir.iterdir()):
         if not prompt_dir.is_dir() or prompt_dir.name.startswith("_"):
@@ -354,9 +366,7 @@ def aggregate_to_csv(
 
         for vp, score in per_video:
             stem = Path(vp).stem  # "<prompt_text>-seed<NNNN>"
-            m = re.match(r"^(.*)-seed(\d+)$", stem)
-            prompt_text = m.group(1) if m else stem
-            seed_idx = int(m.group(2)) if m else -1
+            prompt_text, seed_idx = parse_staged_video_stem(stem)
             meta = text_to_meta.get(prompt_text, {})
             row = {
                 "prompt_id": meta.get("prompt_id", "?"),

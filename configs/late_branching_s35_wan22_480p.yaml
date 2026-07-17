@@ -1,0 +1,44 @@
+# Late-stage branching feasibility test: 15 prompts x 10 root seeds.
+# One unperturbed batched control and four noisy suffixes share 35 of 50 steps.
+
+model:
+  name: wan22_ti2v_5b
+  path: /data/datasets/fanjiang/.cache/huggingface/hub/models--Wan-AI--Wan2.2-TI2V-5B-Diffusers
+  dtype: bf16
+  device: cuda
+  scheduler: unipc
+
+generation:
+  resolution: [480, 832]
+  num_frames: 81
+  num_inference_steps: 50
+  guidance_scale: 5.0
+
+late_branching:
+  # 1-based: fork immediately after completing denoising step 35.
+  # With Wan's flow_shift=5 and 50 UniPC steps, the post-step sigma is about
+  # 0.6825. Step 35 is late in compute, but not a near-zero-noise endpoint.
+  branch_step: 35
+  # Four perturbed candidates plus one unperturbed branch in the same batch.
+  # This batched control measures numerical drift; use the original batch-one
+  # baseline as the actual no-intervention reference in oracle analysis.
+  num_noise_branches: 4
+  include_batched_control: true
+  # Gaussian perturbation std = current scheduler sigma * this scale.
+  perturbation_scale: 0.10
+  noise_seed_offset: 10000000
+
+prompts:
+  source: ttsd.prompts.dev_set:DEV_PROMPTS
+
+seeds:
+  count: 10
+  base: 0
+
+output:
+  root: runs/late_branching
+  run_id: null
+  save_video: true
+  fps: 16
+  # Candidate ids are root_seed * stride + candidate_index.
+  candidate_seed_stride: 100

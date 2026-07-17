@@ -13,6 +13,14 @@ from dataclasses import dataclass, field
 
 import torch
 
+from ttsd.search.late_branching import (
+    BranchSpec,
+    LateBranchConfig,
+    denoising_step_equivalents,
+    fork_latents,
+    sigma_after_step,
+)
+
 DEFAULT_MODEL_PATH = (
     "/data/datasets/fanjiang/.cache/huggingface/hub/"
     "models--Wan-AI--Wan2.2-TI2V-5B-Diffusers"
@@ -94,6 +102,15 @@ class GenerationOutput:
     raw_latents_by_step: dict[int, torch.Tensor] = field(default_factory=dict)
     model_outputs_by_step: dict[int, torch.Tensor] = field(default_factory=dict)
     scheduler_meta: dict = field(default_factory=dict)
+
+
+@dataclass
+class LateBranchGenerationOutput:
+    frames_by_branch: list
+    branch_specs: list[BranchSpec]
+    branch_step: int
+    branch_sigma: float
+    denoising_step_equivalents: int
 
 
 class Wan22Adapter:
@@ -299,3 +316,88 @@ class Wan22Adapter:
         # `result.frames` is typically (B, T, H, W, 3) for video pipelines.
         frames = result.frames[0] if hasattr(result, "frames") else result[0]
         return GenerationOutput(frames=frames, latents_by_step=captured)
+
+    @torch.no_grad()
+    def generate_with_late_branches(
+        self,
+        prompt: str,
+        seed: int,
+        branch_config: LateBranchConfig,
+        num_frames: int = 81,
+        height: int = 480,
+        width: int = 832,
+        num_inference_steps: int = 50,
+        guidance_scale: float = 5.0,
+    ) -> LateBranchGenerationOutput:
+        """Share one prefix, fork the latent once, then batch all suffixes.
+
+        The unperturbed branch is part of the same expanded batch as the noisy
+        candidates. It diagnoses batch-dependent numerical drift, but is not a
+        substitute for a separately generated batch-one baseline. The callback
+        repeats both conditional and unconditional prompt embeddings.
+        """
+
+        branch_config.validate(num_inference_steps)
+        self._load()
+        branch_specs: list[BranchSpec] = []
+        branch_sigma: float | None = None
+
+        def _cb(pipe, step_idx, timestep, callback_kwargs):
+            del timestep
+            nonlocal branch_specs, branch_sigma
+            if step_idx != branch_config.branch_step - 1:
+                return callback_kwargs
+
+            branch_sigma = sigma_after_step(pipe.scheduler, step_idx)
+            branched_latents, branch_specs = fork_latents(
+                callback_kwargs["latents"],
+                root_seed=seed,
+                sigma=branch_sigma,
+                config=branch_config,
+            )
+            callback_kwargs["latents"] = branched_latents
+            for key in ("prompt_embeds", "negative_prompt_embeds"):
+                embeds = callback_kwargs.get(key)
+                if embeds is not None:
+                    callback_kwargs[key] = embeds.repeat_interleave(
+                        branch_config.total_branches, dim=0
+                    )
+            return callback_kwargs
+
+        generator = torch.Generator(device=self.device).manual_seed(seed)
+        result = self._pipe(
+            prompt=prompt,
+            num_frames=num_frames,
+            height=height,
+            width=width,
+            num_inference_steps=num_inference_steps,
+            guidance_scale=guidance_scale,
+            generator=generator,
+            callback_on_step_end=_cb,
+            callback_on_step_end_tensor_inputs=[
+                "latents",
+                "prompt_embeds",
+                "negative_prompt_embeds",
+            ],
+        )
+
+        if branch_sigma is None or not branch_specs:
+            raise RuntimeError("late-branch callback was never reached")
+        frames = result.frames if hasattr(result, "frames") else result[0]
+        if len(frames) != branch_config.total_branches:
+            raise RuntimeError(
+                "pipeline returned an unexpected number of videos: "
+                f"expected {branch_config.total_branches}, got {len(frames)}"
+            )
+
+        return LateBranchGenerationOutput(
+            frames_by_branch=[frames[i] for i in range(len(frames))],
+            branch_specs=branch_specs,
+            branch_step=branch_config.branch_step,
+            branch_sigma=branch_sigma,
+            denoising_step_equivalents=denoising_step_equivalents(
+                num_inference_steps,
+                branch_config.branch_step,
+                branch_config.total_branches,
+            ),
+        )
