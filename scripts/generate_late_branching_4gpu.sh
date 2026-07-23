@@ -8,8 +8,13 @@ CONFIG="${CONFIG:-configs/late_branching_s35_wan22_480p.yaml}"
 RUN_ID="${RUN_ID:-late_branch_s35_m4_$(date -u +%Y%m%d_%H%M%S)}"
 PYTHON="${PYTHON:-$REPO_ROOT/.venv/bin/python}"
 GPU_IDS_CSV="${GPU_IDS:-0,1,2,3}"
+PAIRS_FILE="${PAIRS_FILE:-}"
 IFS=',' read -r -a GPU_IDS_ARRAY <<< "$GPU_IDS_CSV"
 NUM_SHARDS="${#GPU_IDS_ARRAY[@]}"
+EXTRA_ARGS=()
+if [[ -n "$PAIRS_FILE" ]]; then
+  EXTRA_ARGS+=(--pairs-file "$PAIRS_FILE")
+fi
 
 if [[ ! -x "$PYTHON" ]]; then
   echo "Python executable not found: $PYTHON" >&2
@@ -28,6 +33,7 @@ for shard_index in "${!GPU_IDS_ARRAY[@]}"; do
     --run-id "$RUN_ID" \
     --shard-index "$shard_index" \
     --num-shards "$NUM_SHARDS" \
+    "${EXTRA_ARGS[@]}" \
     >"$log" 2>&1 &
   pid="$!"
   pids+=("$pid")

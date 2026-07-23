@@ -22,6 +22,7 @@ class LateBranchConfig:
     perturbation_scale: float = 0.10
     include_batched_control: bool = True
     noise_seed_offset: int = 10_000_000
+    noise_seed_stride: int | None = None
 
     def validate(self, num_inference_steps: int) -> None:
         if not 1 <= self.branch_step < num_inference_steps:
@@ -35,10 +36,23 @@ class LateBranchConfig:
             raise ValueError("perturbation_scale must be positive")
         if self.noise_seed_offset < 0:
             raise ValueError("noise_seed_offset must be non-negative")
+        if self.noise_seed_stride is not None:
+            if self.noise_seed_stride < 1:
+                raise ValueError("noise_seed_stride must be positive")
+            if self.noise_seed_stride < self.num_noise_branches:
+                raise ValueError(
+                    "noise_seed_stride must be at least num_noise_branches"
+                )
 
     @property
     def total_branches(self) -> int:
         return self.num_noise_branches + int(self.include_batched_control)
+
+    @property
+    def resolved_noise_seed_stride(self) -> int:
+        """Use a fixed stride for nested Best-of-M directions when configured."""
+
+        return self.noise_seed_stride or self.num_noise_branches
 
 
 @dataclass(frozen=True)
@@ -93,7 +107,7 @@ def fork_latents(
     for noise_index in range(config.num_noise_branches):
         perturbation_seed = (
             config.noise_seed_offset
-            + root_seed * config.num_noise_branches
+            + root_seed * config.resolved_noise_seed_stride
             + noise_index
         )
         generator = torch.Generator(device=latents.device).manual_seed(perturbation_seed)

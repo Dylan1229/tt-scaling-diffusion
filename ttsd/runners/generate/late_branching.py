@@ -8,6 +8,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import csv
 import datetime as dt
 import importlib
 import json
@@ -45,6 +46,8 @@ class LateBranchRunMeta:
     branch_sigma: float
     perturbation_scale: float
     perturbation_std: float
+    noise_seed_stride: int
+    posterior_mean_steps: list[int]
     total_candidates: int
     denoising_step_equivalents: int
     compute_ratio_vs_baseline: float
@@ -99,6 +102,35 @@ def _flatten_work(
     return work
 
 
+def _load_pairs(path: Path) -> list[tuple[str, int]]:
+    with path.open(newline="") as handle:
+        reader = csv.DictReader(handle)
+        required = {"prompt_id", "root_seed"}
+        if not required.issubset(reader.fieldnames or []):
+            raise ValueError(
+                f"{path} must contain columns: {', '.join(sorted(required))}"
+            )
+        pairs = [
+            (str(row["prompt_id"]).strip(), int(row["root_seed"])) for row in reader
+        ]
+    if not pairs:
+        raise ValueError(f"{path} contains no prompt/root pairs")
+    if len(set(pairs)) != len(pairs):
+        raise ValueError(f"{path} contains duplicate prompt/root pairs")
+    return pairs
+
+
+def _filter_work_by_pairs(
+    work: list[tuple[dict, int]], pairs: list[tuple[str, int]]
+) -> list[tuple[dict, int]]:
+    lookup = {(prompt["id"], seed): (prompt, seed) for prompt, seed in work}
+    missing = [pair for pair in pairs if pair not in lookup]
+    if missing:
+        formatted = ", ".join(f"{prompt_id}/{seed}" for prompt_id, seed in missing[:8])
+        raise ValueError(f"Unknown prompt/root pairs: {formatted}")
+    return [lookup[pair] for pair in pairs]
+
+
 def _candidate_seed(root_seed: int, candidate_index: int, stride: int) -> int:
     if root_seed < 0:
         raise ValueError("root seeds must be non-negative")
@@ -149,6 +181,12 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--limit-seeds", type=int, default=None)
     parser.add_argument("--prompt-ids", default="", help="Comma-separated prompt ids.")
     parser.add_argument("--seed-idxs", default="", help="Comma-separated root seeds.")
+    parser.add_argument(
+        "--pairs-file",
+        type=Path,
+        default=None,
+        help="CSV with explicit prompt_id,root_seed pairs.",
+    )
     parser.add_argument("--device", default=None, help="Override model.device, e.g. cuda:1.")
     parser.add_argument("--branch-step", type=int, default=None)
     parser.add_argument("--num-noise-branches", type=int, default=None)
@@ -182,6 +220,11 @@ def main(argv: list[str] | None = None) -> None:
         perturbation_scale=float(branch_cfg["perturbation_scale"]),
         include_batched_control=bool(branch_cfg.get("include_batched_control", True)),
         noise_seed_offset=int(branch_cfg.get("noise_seed_offset", 10_000_000)),
+        noise_seed_stride=(
+            int(branch_cfg["noise_seed_stride"])
+            if branch_cfg.get("noise_seed_stride") is not None
+            else None
+        ),
     )
     late_config.validate(int(gen_cfg["num_inference_steps"]))
     if not late_config.include_batched_control:
@@ -208,6 +251,8 @@ def main(argv: list[str] | None = None) -> None:
         limit_seeds=args.limit_seeds,
         seed_idxs=args.seed_idxs,
     )
+    if args.pairs_file is not None:
+        work = _filter_work_by_pairs(work, _load_pairs(args.pairs_file))
     if not work:
         raise SystemExit("No prompt/seed groups selected")
     total_groups = len(work)
@@ -248,6 +293,9 @@ def main(argv: list[str] | None = None) -> None:
     )
 
     height, width = gen_cfg["resolution"]
+    posterior_mean_offsets = [
+        int(offset) for offset in branch_cfg.get("posterior_mean_offsets", [])
+    ]
     for prompt, root_seed in work:
         candidate_paths = [
             run_root
@@ -274,6 +322,8 @@ def main(argv: list[str] | None = None) -> None:
             width=width,
             num_inference_steps=gen_cfg["num_inference_steps"],
             guidance_scale=gen_cfg["guidance_scale"],
+            posterior_mean_offsets=posterior_mean_offsets,
+            decode_batch_size=int(branch_cfg.get("decode_batch_size", 8)),
         )
         elapsed_seconds = time.perf_counter() - started
         timestamp = dt.datetime.now().isoformat(timespec="seconds")
@@ -286,6 +336,13 @@ def main(argv: list[str] | None = None) -> None:
             out_dir.mkdir(parents=True, exist_ok=True)
             if out_cfg.get("save_video", True):
                 _save_video(frames, out_dir / "video.mp4", fps=int(out_cfg.get("fps", 16)))
+            for step, batched_posterior in result.posterior_means_by_step.items():
+                posterior_dir = out_dir / "posterior_means"
+                posterior_dir.mkdir(exist_ok=True)
+                torch.save(
+                    batched_posterior[spec.index : spec.index + 1].contiguous(),
+                    posterior_dir / f"step_{step:03d}.pt",
+                )
 
             candidate_seed = _candidate_seed(root_seed, spec.index, candidate_seed_stride)
             meta = LateBranchRunMeta(
@@ -310,6 +367,8 @@ def main(argv: list[str] | None = None) -> None:
                 branch_sigma=result.branch_sigma,
                 perturbation_scale=late_config.perturbation_scale,
                 perturbation_std=spec.perturbation_std,
+                noise_seed_stride=late_config.resolved_noise_seed_stride,
+                posterior_mean_steps=sorted(result.posterior_means_by_step),
                 total_candidates=late_config.total_branches,
                 denoising_step_equivalents=result.denoising_step_equivalents,
                 compute_ratio_vs_baseline=(

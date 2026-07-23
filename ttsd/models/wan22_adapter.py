@@ -111,6 +111,7 @@ class LateBranchGenerationOutput:
     branch_step: int
     branch_sigma: float
     denoising_step_equivalents: int
+    posterior_means_by_step: dict[int, torch.Tensor] = field(default_factory=dict)
 
 
 class Wan22Adapter:
@@ -163,6 +164,39 @@ class Wan22Adapter:
     @staticmethod
     def _capture_tensor(tensor: torch.Tensor) -> torch.Tensor:
         return tensor.detach().to("cpu", dtype=torch.float16).clone()
+
+    def _decode_latents_in_chunks(
+        self, latents: torch.Tensor, batch_size: int
+    ) -> list:
+        if batch_size < 1:
+            raise ValueError("decode_batch_size must be positive")
+        pipe = self._pipe
+        if not hasattr(pipe, "vae"):
+            return [latents[i] for i in range(len(latents))]
+
+        torch.cuda.empty_cache()
+        frames: list = []
+        for start in range(0, len(latents), batch_size):
+            chunk = latents[start : start + batch_size].to(pipe.vae.dtype)
+            latents_mean = (
+                torch.tensor(pipe.vae.config.latents_mean)
+                .view(1, pipe.vae.config.z_dim, 1, 1, 1)
+                .to(chunk.device, chunk.dtype)
+            )
+            latents_std = (
+                1.0
+                / torch.tensor(pipe.vae.config.latents_std)
+                .view(1, pipe.vae.config.z_dim, 1, 1, 1)
+                .to(chunk.device, chunk.dtype)
+            )
+            decoded = pipe.vae.decode(
+                chunk / latents_std + latents_mean, return_dict=False
+            )[0]
+            videos = pipe.video_processor.postprocess_video(decoded, output_type="np")
+            frames.extend(videos[i] for i in range(len(videos)))
+            del chunk, decoded, videos
+            torch.cuda.empty_cache()
+        return frames
 
     @torch.no_grad()
     def generate_with_posterior_means(
@@ -328,6 +362,8 @@ class Wan22Adapter:
         width: int = 832,
         num_inference_steps: int = 50,
         guidance_scale: float = 5.0,
+        posterior_mean_offsets: Iterable[int] = (),
+        decode_batch_size: int = 8,
     ) -> LateBranchGenerationOutput:
         """Share one prefix, fork the latent once, then batch all suffixes.
 
@@ -341,6 +377,47 @@ class Wan22Adapter:
         self._load()
         branch_specs: list[BranchSpec] = []
         branch_sigma: float | None = None
+        posterior_offsets = set(int(offset) for offset in posterior_mean_offsets)
+        if any(offset < 1 for offset in posterior_offsets):
+            raise ValueError("posterior_mean_offsets must contain positive integers")
+        posterior_steps = {
+            branch_config.branch_step - 1 + offset for offset in posterior_offsets
+        }
+        if any(step >= num_inference_steps for step in posterior_steps):
+            raise ValueError(
+                "posterior_mean_offsets extend beyond num_inference_steps"
+            )
+        posterior_means: dict[int, torch.Tensor] = {}
+        original_step = self._pipe.scheduler.step
+        scheduler_step_idx = 0
+
+        def wrapped_step(*args, **kwargs):
+            nonlocal scheduler_step_idx
+            model_output = args[0] if args else kwargs["model_output"]
+            timestep = args[1] if len(args) >= 2 else kwargs.get("timestep")
+            if len(args) >= 3:
+                sample = args[2]
+            elif "sample" in kwargs:
+                sample = kwargs["sample"]
+            else:
+                raise RuntimeError(
+                    "scheduler.step called without a recognizable `sample` arg"
+                )
+
+            sched = self._pipe.scheduler
+            if scheduler_step_idx in posterior_steps:
+                if getattr(sched, "step_index", None) is None and hasattr(
+                    sched, "_init_step_index"
+                ):
+                    sched._init_step_index(timestep)
+                posterior = _posterior_mean_from_step(
+                    sched, model_output, sample, scheduler_step_idx
+                )
+                posterior_means[scheduler_step_idx] = self._capture_tensor(posterior)
+
+            result = original_step(*args, **kwargs)
+            scheduler_step_idx += 1
+            return result
 
         def _cb(pipe, step_idx, timestep, callback_kwargs):
             del timestep
@@ -364,34 +441,40 @@ class Wan22Adapter:
                     )
             return callback_kwargs
 
-        generator = torch.Generator(device=self.device).manual_seed(seed)
-        result = self._pipe(
-            prompt=prompt,
-            num_frames=num_frames,
-            height=height,
-            width=width,
-            num_inference_steps=num_inference_steps,
-            guidance_scale=guidance_scale,
-            generator=generator,
-            callback_on_step_end=_cb,
-            callback_on_step_end_tensor_inputs=[
-                "latents",
-                "prompt_embeds",
-                "negative_prompt_embeds",
-            ],
-        )
+        self._pipe.scheduler.step = wrapped_step
+        try:
+            generator = torch.Generator(device=self.device).manual_seed(seed)
+            result = self._pipe(
+                prompt=prompt,
+                num_frames=num_frames,
+                height=height,
+                width=width,
+                num_inference_steps=num_inference_steps,
+                guidance_scale=guidance_scale,
+                generator=generator,
+                callback_on_step_end=_cb,
+                callback_on_step_end_tensor_inputs=[
+                    "latents",
+                    "prompt_embeds",
+                    "negative_prompt_embeds",
+                ],
+                output_type="latent",
+            )
+        finally:
+            self._pipe.scheduler.step = original_step
 
         if branch_sigma is None or not branch_specs:
             raise RuntimeError("late-branch callback was never reached")
-        frames = result.frames if hasattr(result, "frames") else result[0]
-        if len(frames) != branch_config.total_branches:
+        final_latents = result.frames if hasattr(result, "frames") else result[0]
+        if len(final_latents) != branch_config.total_branches:
             raise RuntimeError(
-                "pipeline returned an unexpected number of videos: "
-                f"expected {branch_config.total_branches}, got {len(frames)}"
+                "pipeline returned an unexpected number of final latents: "
+                f"expected {branch_config.total_branches}, got {len(final_latents)}"
             )
+        frames = self._decode_latents_in_chunks(final_latents, decode_batch_size)
 
         return LateBranchGenerationOutput(
-            frames_by_branch=[frames[i] for i in range(len(frames))],
+            frames_by_branch=frames,
             branch_specs=branch_specs,
             branch_step=branch_config.branch_step,
             branch_sigma=branch_sigma,
@@ -400,4 +483,5 @@ class Wan22Adapter:
                 branch_config.branch_step,
                 branch_config.total_branches,
             ),
+            posterior_means_by_step=posterior_means,
         )

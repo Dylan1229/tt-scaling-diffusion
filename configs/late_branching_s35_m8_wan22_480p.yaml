@@ -1,0 +1,42 @@
+# Full 150-root late-stage branching study with nested Best-of-M directions.
+
+model:
+  name: wan22_ti2v_5b
+  path: /data/datasets/fanjiang/.cache/huggingface/hub/models--Wan-AI--Wan2.2-TI2V-5B-Diffusers
+  dtype: bf16
+  device: cuda
+  scheduler: unipc
+
+generation:
+  resolution: [480, 832]
+  num_frames: 81
+  num_inference_steps: 50
+  guidance_scale: 5.0
+
+late_branching:
+  # 1-based: fork immediately after completing denoising step 35.
+  branch_step: 35
+  # Eight noisy candidates plus a batched, unperturbed diagnostic control.
+  num_noise_branches: 8
+  include_batched_control: true
+  perturbation_scale: 0.10
+  noise_seed_offset: 10000000
+  # Fixed across M so the first 1/2/4/8 directions are identical.
+  noise_seed_stride: 1000
+  # Capture x0 estimates at global steps 36, 38, and 40 for causal verifiers.
+  posterior_mean_offsets: [1, 3, 5]
+  decode_batch_size: 8
+
+prompts:
+  source: ttsd.prompts.dev_set:DEV_PROMPTS
+
+seeds:
+  count: 10
+  base: 0
+
+output:
+  root: runs/late_branching
+  run_id: null
+  save_video: true
+  fps: 16
+  candidate_seed_stride: 100
