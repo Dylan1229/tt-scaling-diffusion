@@ -328,12 +328,87 @@ def _selection_rows(
     return rows
 
 
+def _evaluate_fixed_rules(frame: pd.DataFrame, run_name: str) -> list[dict]:
+    rule_specs = {
+        "fixed_min_late_change": (
+            "s037_to_s039_relative_l2",
+            True,
+        ),
+        "fixed_max_late_cosine": (
+            "s037_to_s039_cosine",
+            False,
+        ),
+        "fixed_min_late_delta_std": (
+            "s037_to_s039_delta_std",
+            True,
+        ),
+        "fixed_min_step40_temporal": (
+            "s039_temporal_rms",
+            True,
+        ),
+    }
+    rows = []
+    for model_name, (feature, minimize) in rule_specs.items():
+        for (prompt_id, root_seed), group in frame.groupby(
+            ["prompt_id", "root_seed"], sort=True
+        ):
+            selected = (
+                group.loc[group[feature].idxmin()]
+                if minimize
+                else group.loc[group[feature].idxmax()]
+            )
+            better_than_control = (
+                float(selected[f"delta_{feature}"]) < 0
+                if minimize
+                else float(selected[f"delta_{feature}"]) > 0
+            )
+            for gate, accepted in (
+                ("always_select", True),
+                ("better_than_control", better_than_control),
+            ):
+                rows.append(
+                    {
+                        "run": run_name,
+                        "model": model_name,
+                        "gate": gate,
+                        "outer_prompt": prompt_id,
+                        "prompt_id": prompt_id,
+                        "root_seed": int(root_seed),
+                        "candidate_index": int(selected["candidate_index"]),
+                        "candidate_seed": int(selected["candidate_seed"]),
+                        "probability": np.nan,
+                        "threshold": np.nan,
+                        "accepted": accepted,
+                        "quality_win": (
+                            bool(selected["quality_win"]) if accepted else False
+                        ),
+                        "safe_win": (
+                            bool(selected["safe_win"]) if accepted else False
+                        ),
+                        "quality_delta": (
+                            float(selected["quality_delta"]) if accepted else 0.0
+                        ),
+                        "dynamic_delta": (
+                            float(selected["dynamic_delta"]) if accepted else 0.0
+                        ),
+                        "overall_delta": (
+                            float(selected["overall_delta"]) if accepted else 0.0
+                        ),
+                        "video_path": selected["video_path"],
+                    }
+                )
+    return rows
+
+
 def _evaluate_verifiers(
     train_source: pd.DataFrame,
     secondary: pd.DataFrame,
     features: list[str],
 ) -> pd.DataFrame:
-    rows: list[dict] = []
+    rows = [
+        *_evaluate_fixed_rules(train_source, "M8_full"),
+        *_evaluate_fixed_rules(secondary, "M16_representative"),
+    ]
     for outer_prompt in sorted(train_source["prompt_id"].unique()):
         train = train_source[train_source["prompt_id"] != outer_prompt].copy()
         test_m8 = train_source[train_source["prompt_id"] == outer_prompt].copy()
