@@ -90,14 +90,18 @@ def _draw_metric_card(fig, rect, label: str, value: str, note: str, color: str):
     ax.set_xticks([])
     ax.set_yticks([])
     ax.text(0.06, 0.78, label, fontsize=11, color=MUTED, transform=ax.transAxes)
+    value_lines = "\n".join(textwrap.wrap(value, 20))
+    value_font_size = 27 if "\n" not in value_lines else 19
+    value_y = 0.43 if "\n" not in value_lines else 0.56
     ax.text(
         0.06,
-        0.43,
-        value,
-        fontsize=27,
+        value_y,
+        value_lines,
+        fontsize=value_font_size,
         fontweight="bold",
         color=color,
         transform=ax.transAxes,
+        va="center",
     )
     ax.text(
         0.06,
@@ -597,6 +601,15 @@ def main(argv: list[str] | None = None) -> None:
                     _pct(row["safe_win_rate"]),
                 ]
             )
+        table_rows.append(
+            [
+                "All learned models",
+                "80% / 90% target",
+                "Inner prompt-grouped OOF",
+                "0/150 (abstain)",
+                "No gate qualified",
+            ]
+        )
         _readable_table(
             fig,
             [0.055, 0.29, 0.865, 0.54],
@@ -707,8 +720,9 @@ def main(argv: list[str] | None = None) -> None:
             (
                 "4. Learned online verifier",
                 (
-                    f"Best exploratory held-out result reaches {_pct(learned_value['safe_win_rate'])} "
-                    f"on n={int(learned_value['accepted'])} accepted M8 roots."
+                    "No 80% or 90% precision gate qualified in inner prompt-grouped OOF. "
+                    f"The best forced-selection held-out result is {_pct(learned_value['safe_win_rate'])} "
+                    f"on n={int(learned_value['accepted'])} M8 roots."
                     if learned_value is not None
                     else "No learned gate accepted at least five M8 roots."
                 ),
