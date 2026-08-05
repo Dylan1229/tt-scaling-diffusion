@@ -46,3 +46,6 @@ notebooks/
 .env
 .envrc
 configs/local_*.yaml
+
+# Isolated Codex worktrees
+.worktrees/
