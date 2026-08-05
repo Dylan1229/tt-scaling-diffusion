@@ -30,4 +30,3 @@ The page is for Peihao and the research team to review rescue candidates and use
 - The deployed page must load all 44 videos and allow direct playback.
 - Every Bad Seed must be matched to the correct Prompt and a visibly better reference Seed.
 - The page should be understandable without reading experiment implementation details.
-
