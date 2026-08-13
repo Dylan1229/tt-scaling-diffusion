@@ -1,0 +1,121 @@
+prompt_id,axis,vbench_index,prompt_class,motion_bucket,subject_count,relation_class,camera_class,complexity_class,seeds,prompt_text
+pd001,object_class,0,static_single_or_scene,static_prompt,single_person,none,none,simple,0 1 2,a person
+pd002,object_class,1,static_single_or_scene,static_prompt,single_subject,none,none,simple,0 1 2,a bicycle
+pd003,object_class,2,static_single_or_scene,static_prompt,single_subject,none,none,simple,0 1 2,a car
+pd004,object_class,3,static_single_or_scene,static_prompt,single_subject,none,none,simple,0 1 2,a motorcycle
+pd005,object_class,4,static_single_or_scene,static_prompt,single_subject,none,none,simple,0 1 2,an airplane
+pd006,object_class,5,static_single_or_scene,static_prompt,single_subject,none,none,simple,0 1 2,a bus
+pd007,object_class,6,static_single_or_scene,static_prompt,single_subject,none,none,simple,0 1 2,a train
+pd008,object_class,7,static_single_or_scene,static_prompt,single_subject,none,none,simple,0 1 2,a truck
+pd009,object_class,8,static_single_or_scene,static_prompt,single_subject,none,none,simple,0 1 2,a boat
+pd010,object_class,9,static_single_or_scene,static_prompt,single_subject,none,none,simple,0 1 2,a traffic light
+pd011,object_class,10,static_single_or_scene,static_prompt,single_subject,none,none,simple,0 1 2,a fire hydrant
+pd012,object_class,11,static_single_or_scene,static_prompt,single_subject,none,none,simple,0 1 2,a stop sign
+pd013,scene,0,static_single_or_scene,static_prompt,scene_only,none,none,simple,0 1 2,alley
+pd014,scene,1,static_single_or_scene,static_prompt,scene_only,none,none,simple,0 1 2,amusement park
+pd015,scene,2,static_single_or_scene,static_prompt,scene_only,none,none,simple,0 1 2,aquarium
+pd016,scene,3,static_single_or_scene,static_prompt,scene_only,none,none,simple,0 1 2,arch
+pd017,scene,4,static_single_or_scene,static_prompt,scene_only,none,none,simple,0 1 2,art gallery
+pd018,scene,5,static_single_or_scene,static_prompt,scene_only,none,none,simple,0 1 2,bathroom
+pd019,scene,6,static_single_or_scene,static_prompt,scene_only,none,none,simple,0 1 2,bakery shop
+pd020,scene,7,static_single_or_scene,static_prompt,scene_only,none,none,simple,0 1 2,ballroom
+pd021,scene,8,static_single_or_scene,static_prompt,scene_only,none,none,simple,0 1 2,bar
+pd022,scene,9,static_single_or_scene,static_prompt,scene_only,none,none,simple,0 1 2,barn
+pd023,scene,10,static_single_or_scene,static_prompt,scene_only,none,none,simple,0 1 2,basement
+pd024,scene,11,static_single_or_scene,static_prompt,scene_only,none,none,simple,0 1 2,beach
+pd025,multiple_objects,0,multi_object,static_prompt,two_subjects,co_presence,none,simple,0 1 2,a bird and a cat
+pd026,multiple_objects,1,multi_object,static_prompt,two_subjects,co_presence,none,simple,0 1 2,a cat and a dog
+pd027,multiple_objects,2,multi_object,static_prompt,two_subjects,co_presence,none,simple,0 1 2,a dog and a horse
+pd028,multiple_objects,3,multi_object,static_prompt,two_subjects,co_presence,none,simple,0 1 2,a horse and a sheep
+pd029,multiple_objects,4,multi_object,static_prompt,two_subjects,co_presence,none,simple,0 1 2,a sheep and a cow
+pd030,multiple_objects,5,multi_object,static_prompt,two_subjects,co_presence,none,simple,0 1 2,a cow and an elephant
+pd031,multiple_objects,6,multi_object,static_prompt,two_subjects,co_presence,none,simple,0 1 2,an elephant and a bear
+pd032,multiple_objects,7,multi_object,static_prompt,two_subjects,co_presence,none,simple,0 1 2,a bear and a zebra
+pd033,multiple_objects,8,multi_object,static_prompt,two_subjects,co_presence,none,simple,0 1 2,a zebra and a giraffe
+pd034,multiple_objects,9,multi_object,static_prompt,two_subjects,co_presence,none,simple,0 1 2,a giraffe and a bird
+pd035,multiple_objects,10,multi_object,static_prompt,two_subjects,co_presence,none,simple,0 1 2,a chair and a couch
+pd036,multiple_objects,11,multi_object,static_prompt,two_subjects,co_presence,none,simple,0 1 2,a couch and a potted plant
+pd037,multiple_objects,12,multi_object,static_prompt,two_subjects,co_presence,none,simple,0 1 2,a potted plant and a tv
+pd038,multiple_objects,13,multi_object,static_prompt,two_subjects,co_presence,none,simple,0 1 2,a tv and a laptop
+pd039,multiple_objects,14,multi_object,static_prompt,two_subjects,co_presence,none,simple,0 1 2,a laptop and a remote
+pd040,multiple_objects,15,multi_object,static_prompt,two_subjects,co_presence,none,simple,0 1 2,a remote and a keyboard
+pd041,spatial_relationship,0,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,0 1 2,"a bicycle on the left of a car, front view"
+pd042,spatial_relationship,1,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,0 1 2,"a car on the right of a motorcycle, front view"
+pd043,spatial_relationship,2,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,0 1 2,"a motorcycle on the left of a bus, front view"
+pd044,spatial_relationship,3,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,0 1 2,"a bus on the right of a traffic light, front view"
+pd045,spatial_relationship,4,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,0 1 2,"a traffic light on the left of a fire hydrant, front view"
+pd046,spatial_relationship,5,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,0 1 2,"a fire hydrant on the right of a stop sign, front view"
+pd047,spatial_relationship,6,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,0 1 2,"a stop sign on the left of a parking meter, front view"
+pd048,spatial_relationship,7,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,0 1 2,"a parking meter on the right of a bench, front view"
+pd049,spatial_relationship,8,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,0 1 2,"a bench on the left of a truck, front view"
+pd050,spatial_relationship,9,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,0 1 2,"a truck on the right of a bicycle, front view"
+pd051,spatial_relationship,10,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,0 1 2,"a bird on the left of a cat, front view"
+pd052,spatial_relationship,11,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,0 1 2,"a cat on the right of a dog, front view"
+pd053,spatial_relationship,12,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,0 1 2,"a dog on the left of a horse, front view"
+pd054,spatial_relationship,13,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,0 1 2,"a horse on the right of a sheep, front view"
+pd055,spatial_relationship,14,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,0 1 2,"a sheep on the left of a cow, front view"
+pd056,spatial_relationship,15,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,0 1 2,"a cow on the right of an elephant, front view"
+pd057,human_action,0,human_action,human_motion,single_person,none,none,moderate,0 1 2,A person is riding a bike
+pd058,human_action,1,human_action,human_motion,single_person,none,none,moderate,0 1 2,A person is marching
+pd059,human_action,2,human_action,human_motion,single_person,none,none,moderate,0 1 2,A person is roller skating
+pd060,human_action,3,human_action,human_motion,single_person,none,none,moderate,0 1 2,A person is tasting beer
+pd061,human_action,4,human_action,human_motion,single_person,none,none,moderate,0 1 2,A person is clapping
+pd062,human_action,5,human_action,human_motion,single_person,none,none,moderate,0 1 2,A person is drawing
+pd063,human_action,6,human_action,human_motion,single_person,none,none,moderate,0 1 2,A person is petting animal (not cat)
+pd064,human_action,7,human_action,human_motion,single_person,none,none,moderate,0 1 2,A person is eating watermelon
+pd065,human_action,8,human_action,human_motion,single_person,none,none,moderate,0 1 2,A person is playing harp
+pd066,human_action,9,human_action,human_motion,single_person,none,none,moderate,0 1 2,A person is wrestling
+pd067,human_action,10,human_action,human_motion,single_person,none,none,moderate,0 1 2,A person is riding scooter
+pd068,human_action,11,human_action,human_motion,single_person,none,none,moderate,0 1 2,A person is sweeping floor
+pd069,human_action,12,human_action,human_motion,single_person,none,none,moderate,0 1 2,A person is skateboarding
+pd070,human_action,13,human_action,human_motion,single_person,none,none,moderate,0 1 2,A person is dunking basketball
+pd071,human_action,14,human_action,human_motion,single_person,none,none,moderate,0 1 2,A person is playing flute
+pd072,human_action,15,human_action,human_motion,single_person,none,none,moderate,0 1 2,A person is stretching leg
+pd073,human_action,16,human_action,human_motion,single_person,none,none,moderate,0 1 2,A person is tying tie
+pd074,human_action,17,human_action,human_motion,single_person,none,none,moderate,0 1 2,A person is skydiving
+pd075,human_action,18,human_action,human_motion,single_person,none,none,moderate,0 1 2,A person is shooting goal (soccer)
+pd076,human_action,19,human_action,human_motion,single_person,none,none,moderate,0 1 2,A person is playing piano
+pd077,subject_consistency,0,subject_motion,subject_motion,single_person,none,none,moderate,0 1 2,a person swimming in ocean
+pd078,subject_consistency,1,subject_motion,subject_motion,multi_subject,none,none,moderate,0 1 2,a person giving a presentation to a room full of colleagues
+pd079,subject_consistency,2,subject_motion,subject_motion,single_person,none,none,moderate,0 1 2,a person washing the dishes
+pd080,subject_consistency,3,subject_motion,subject_motion,single_person,none,none,moderate,0 1 2,a person eating a burger
+pd081,subject_consistency,4,subject_motion,subject_motion,single_person,none,none,moderate,0 1 2,a person walking in the snowstorm
+pd082,subject_consistency,5,subject_motion,subject_motion,single_person,none,none,moderate,0 1 2,a person drinking coffee in a cafe
+pd083,subject_consistency,6,subject_motion,subject_motion,single_person,none,none,moderate,0 1 2,a person playing guitar
+pd084,subject_consistency,7,subject_motion,subject_motion,single_subject,none,none,moderate,0 1 2,a bicycle leaning against a tree
+pd085,subject_consistency,8,subject_motion,subject_motion,single_subject,none,none,moderate,0 1 2,a bicycle gliding through a snowy field
+pd086,subject_consistency,9,subject_motion,subject_motion,single_subject,none,none,moderate,0 1 2,a bicycle slowing down to stop
+pd087,subject_consistency,10,subject_motion,subject_motion,single_subject,none,none,moderate,0 1 2,a bicycle accelerating to gain speed
+pd088,subject_consistency,11,subject_motion,subject_motion,single_subject,none,none,moderate,0 1 2,a car stuck in traffic during rush hour
+pd089,subject_consistency,12,subject_motion,subject_motion,single_subject,none,none,moderate,0 1 2,a car turning a corner
+pd090,subject_consistency,13,subject_motion,subject_motion,single_subject,none,none,moderate,0 1 2,a car slowing down to stop
+pd091,subject_consistency,14,subject_motion,subject_motion,single_subject,none,none,moderate,0 1 2,a car accelerating to gain speed
+pd092,subject_consistency,15,subject_motion,subject_motion,single_subject,none,none,moderate,0 1 2,a motorcycle cruising along a coastal highway
+pd093,subject_consistency,16,subject_motion,subject_motion,single_subject,none,none,moderate,0 1 2,a motorcycle turning a corner
+pd094,subject_consistency,17,subject_motion,subject_motion,single_subject,none,none,moderate,0 1 2,a motorcycle slowing down to stop
+pd095,subject_consistency,18,subject_motion,subject_motion,single_subject,none,none,moderate,0 1 2,a motorcycle gliding through a snowy field
+pd096,subject_consistency,19,subject_motion,subject_motion,single_subject,none,none,moderate,0 1 2,a motorcycle accelerating to gain speed
+pd097,temporal_style,0,camera_motion,low_or_stylized_motion,single_subject,none,slow_motion,moderate,0 1 2,"A beautiful coastal beach in spring, waves lapping on sand, in super slow motion"
+pd098,temporal_style,1,camera_motion,camera_motion,single_subject,none,zoom_in,moderate,0 1 2,"A beautiful coastal beach in spring, waves lapping on sand, zoom in"
+pd099,temporal_style,2,camera_motion,camera_motion,single_subject,none,zoom_out,moderate,0 1 2,"A beautiful coastal beach in spring, waves lapping on sand, zoom out"
+pd100,temporal_style,3,camera_motion,camera_motion,single_subject,none,pan_left,moderate,0 1 2,"A beautiful coastal beach in spring, waves lapping on sand, pan left"
+pd101,temporal_style,4,camera_motion,camera_motion,single_subject,none,pan_right,moderate,0 1 2,"A beautiful coastal beach in spring, waves lapping on sand, pan right"
+pd102,temporal_style,5,camera_motion,camera_motion,single_subject,none,tilt_up,moderate,0 1 2,"A beautiful coastal beach in spring, waves lapping on sand, tilt up"
+pd103,temporal_style,6,camera_motion,camera_motion,single_subject,none,tilt_down,moderate,0 1 2,"A beautiful coastal beach in spring, waves lapping on sand, tilt down"
+pd104,temporal_style,7,camera_motion,camera_motion,single_subject,none,shake,moderate,0 1 2,"A beautiful coastal beach in spring, waves lapping on sand, with an intense shaking effect"
+pd105,temporal_style,8,camera_motion,low_or_stylized_motion,single_subject,none,steady,moderate,0 1 2,"A beautiful coastal beach in spring, waves lapping on sand, featuring a steady and smooth perspective"
+pd106,temporal_style,9,camera_motion,camera_motion,single_subject,none,racking_focus,moderate,0 1 2,"A beautiful coastal beach in spring, waves lapping on sand, racking focus"
+pd107,temporal_style,10,camera_motion,low_or_stylized_motion,single_subject,none,slow_motion,moderate,0 1 2,"The bund Shanghai, in super slow motion"
+pd108,temporal_style,11,camera_motion,camera_motion,single_subject,none,zoom_in,moderate,0 1 2,"The bund Shanghai, zoom in"
+pd109,temporal_style,12,camera_motion,camera_motion,single_subject,none,zoom_out,moderate,0 1 2,"The bund Shanghai, zoom out"
+pd110,temporal_style,13,camera_motion,camera_motion,single_subject,none,pan_left,moderate,0 1 2,"The bund Shanghai, pan left"
+pd111,temporal_style,14,camera_motion,camera_motion,single_subject,none,pan_right,moderate,0 1 2,"The bund Shanghai, pan right"
+pd112,temporal_style,15,camera_motion,camera_motion,single_subject,none,tilt_up,moderate,0 1 2,"The bund Shanghai, tilt up"
+pd113,overall_consistency,0,mixed_story,mixed_motion,single_subject,none,none,complex,0 1 2,Close up of grapes on a rotating table.
+pd114,overall_consistency,1,mixed_story,mixed_motion,single_subject,none,none,complex,0 1 2,Turtle swimming in ocean.
+pd115,overall_consistency,2,mixed_story,mixed_motion,single_subject,none,none,complex,0 1 2,A storm trooper vacuuming the beach.
+pd116,overall_consistency,3,mixed_story,mixed_motion,single_subject,none,none,complex,0 1 2,A panda standing on a surfboard in the ocean in sunset.
+pd117,overall_consistency,4,mixed_story,mixed_motion,single_subject,none,none,complex,0 1 2,"An astronaut feeding ducks on a sunny afternoon, reflection from the water."
+pd118,overall_consistency,5,mixed_story,mixed_motion,multi_subject,none,none,complex,0 1 2,Two pandas discussing an academic paper.
+pd119,overall_consistency,6,mixed_story,mixed_motion,single_subject,none,none,complex,0 1 2,Sunset time lapse at the beach with moving clouds and colors in the sky.
+pd120,overall_consistency,7,mixed_story,mixed_motion,single_subject,none,none,complex,0 1 2,A fat rabbit wearing a purple robe walking through a fantasy landscape.

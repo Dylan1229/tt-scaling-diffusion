@@ -1,0 +1,35 @@
+# End-to-end wall-clock benchmark baseline: 20 prompts x 1 root seed.
+
+model:
+  name: wan22_ti2v_5b
+  path: /data/datasets/fanjiang/.cache/huggingface/hub/models--Wan-AI--Wan2.2-TI2V-5B-Diffusers
+  dtype: bf16
+  device: cuda
+  scheduler: unipc
+
+generation:
+  resolution: [480, 832]
+  num_frames: 81
+  num_inference_steps: 50
+  guidance_scale: 5.0
+
+prompts:
+  source: ttsd.prompts.compute_cost_benchmark_v1:COMPUTE_COST_BENCHMARK_V1_PROMPTS
+
+seeds:
+  count: 1
+  base: 0
+
+snapshots:
+  every_n_steps: 1000
+  also_keep: []
+  posterior_means: false
+  capture_raw_latents: false
+
+output:
+  root: runs/baseline
+  run_id: null
+  save_video: true
+  save_latents: false
+  save_meta: true
+

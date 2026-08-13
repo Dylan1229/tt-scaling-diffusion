@@ -1,0 +1,42 @@
+# Prompt-dependency Step35 branching sweep.
+# 120 prompts x 3 root seeds; each root has 1 batched control + 4 noisy branches.
+
+model:
+  name: wan22_ti2v_5b
+  path: /data/datasets/fanjiang/.cache/huggingface/hub/models--Wan-AI--Wan2.2-TI2V-5B-Diffusers
+  dtype: bf16
+  device: cuda
+  scheduler: unipc
+
+generation:
+  resolution: [480, 832]
+  num_frames: 81
+  num_inference_steps: 50
+  guidance_scale: 5.0
+
+late_branching:
+  branch_step: 35
+  num_noise_branches: 4
+  include_batched_control: true
+  perturbation_scale: 0.10
+  noise_seed_offset: 10000000
+  noise_seed_stride: 1000
+  # This prompt-dependency sweep only needs final videos for VBench/category
+  # analysis. Keep causal verifier snapshots disabled to avoid ~80GB of
+  # unnecessary posterior-mean tensors on the full 360-root run.
+  posterior_mean_offsets: []
+  decode_batch_size: 8
+
+prompts:
+  source: ttsd.prompts.prompt_dependency_v1:PROMPT_DEPENDENCY_V1_PROMPTS
+
+seeds:
+  count: 3
+  base: 0
+
+output:
+  root: runs/late_branching
+  run_id: null
+  save_video: true
+  fps: 16
+  candidate_seed_stride: 100

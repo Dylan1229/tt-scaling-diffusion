@@ -18,6 +18,7 @@ import datetime as dt
 import importlib
 import json
 import os
+import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -42,6 +43,7 @@ class RunMeta:
     capture_posterior_means: bool = False
     posterior_mean_steps: list[int] | None = None
     scheduler: str = "unipc"
+    elapsed_seconds: float | None = None
 
 
 def _load_prompts(spec: str) -> list[dict]:
@@ -209,6 +211,7 @@ def main(argv: list[str] | None = None) -> None:
             (out_dir / "model_outputs").mkdir(exist_ok=True)
 
         print(f"[baseline] ▶ {prompt['id']} seed={seed} :: {prompt['text'][:60]}…")
+        started = time.perf_counter()
         if capture_posterior_means or capture_raw_latents:
             result = adapter.generate_with_posterior_means(
                 prompt=prompt["text"],
@@ -252,6 +255,7 @@ def main(argv: list[str] | None = None) -> None:
                 (out_dir / "scheduler_meta.json").write_text(
                     json.dumps(result.scheduler_meta, indent=2)
                 )
+        elapsed_seconds = time.perf_counter() - started
 
         meta = RunMeta(
             prompt_id=prompt["id"],
@@ -269,9 +273,11 @@ def main(argv: list[str] | None = None) -> None:
             capture_posterior_means=capture_posterior_means,
             posterior_mean_steps=posterior_mean_steps if capture_posterior_means else None,
             scheduler=scheduler_kind,
+            elapsed_seconds=elapsed_seconds,
         )
         (out_dir / "meta.json").write_text(json.dumps(asdict(meta), indent=2))
         (out_dir / "DONE").touch()
+        print(f"[baseline] DONE {prompt['id']} seed={seed} in {elapsed_seconds:.1f}s")
 
     print(f"[baseline] done. outputs under {run_root}")
 

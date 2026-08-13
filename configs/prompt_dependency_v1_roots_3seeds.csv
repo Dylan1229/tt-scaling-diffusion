@@ -1,0 +1,361 @@
+prompt_id,root_seed,axis,vbench_index,prompt_class,motion_bucket,subject_count,relation_class,camera_class,complexity_class,prompt_text
+pd001,0,object_class,0,static_single_or_scene,static_prompt,single_person,none,none,simple,a person
+pd001,1,object_class,0,static_single_or_scene,static_prompt,single_person,none,none,simple,a person
+pd001,2,object_class,0,static_single_or_scene,static_prompt,single_person,none,none,simple,a person
+pd002,0,object_class,1,static_single_or_scene,static_prompt,single_subject,none,none,simple,a bicycle
+pd002,1,object_class,1,static_single_or_scene,static_prompt,single_subject,none,none,simple,a bicycle
+pd002,2,object_class,1,static_single_or_scene,static_prompt,single_subject,none,none,simple,a bicycle
+pd003,0,object_class,2,static_single_or_scene,static_prompt,single_subject,none,none,simple,a car
+pd003,1,object_class,2,static_single_or_scene,static_prompt,single_subject,none,none,simple,a car
+pd003,2,object_class,2,static_single_or_scene,static_prompt,single_subject,none,none,simple,a car
+pd004,0,object_class,3,static_single_or_scene,static_prompt,single_subject,none,none,simple,a motorcycle
+pd004,1,object_class,3,static_single_or_scene,static_prompt,single_subject,none,none,simple,a motorcycle
+pd004,2,object_class,3,static_single_or_scene,static_prompt,single_subject,none,none,simple,a motorcycle
+pd005,0,object_class,4,static_single_or_scene,static_prompt,single_subject,none,none,simple,an airplane
+pd005,1,object_class,4,static_single_or_scene,static_prompt,single_subject,none,none,simple,an airplane
+pd005,2,object_class,4,static_single_or_scene,static_prompt,single_subject,none,none,simple,an airplane
+pd006,0,object_class,5,static_single_or_scene,static_prompt,single_subject,none,none,simple,a bus
+pd006,1,object_class,5,static_single_or_scene,static_prompt,single_subject,none,none,simple,a bus
+pd006,2,object_class,5,static_single_or_scene,static_prompt,single_subject,none,none,simple,a bus
+pd007,0,object_class,6,static_single_or_scene,static_prompt,single_subject,none,none,simple,a train
+pd007,1,object_class,6,static_single_or_scene,static_prompt,single_subject,none,none,simple,a train
+pd007,2,object_class,6,static_single_or_scene,static_prompt,single_subject,none,none,simple,a train
+pd008,0,object_class,7,static_single_or_scene,static_prompt,single_subject,none,none,simple,a truck
+pd008,1,object_class,7,static_single_or_scene,static_prompt,single_subject,none,none,simple,a truck
+pd008,2,object_class,7,static_single_or_scene,static_prompt,single_subject,none,none,simple,a truck
+pd009,0,object_class,8,static_single_or_scene,static_prompt,single_subject,none,none,simple,a boat
+pd009,1,object_class,8,static_single_or_scene,static_prompt,single_subject,none,none,simple,a boat
+pd009,2,object_class,8,static_single_or_scene,static_prompt,single_subject,none,none,simple,a boat
+pd010,0,object_class,9,static_single_or_scene,static_prompt,single_subject,none,none,simple,a traffic light
+pd010,1,object_class,9,static_single_or_scene,static_prompt,single_subject,none,none,simple,a traffic light
+pd010,2,object_class,9,static_single_or_scene,static_prompt,single_subject,none,none,simple,a traffic light
+pd011,0,object_class,10,static_single_or_scene,static_prompt,single_subject,none,none,simple,a fire hydrant
+pd011,1,object_class,10,static_single_or_scene,static_prompt,single_subject,none,none,simple,a fire hydrant
+pd011,2,object_class,10,static_single_or_scene,static_prompt,single_subject,none,none,simple,a fire hydrant
+pd012,0,object_class,11,static_single_or_scene,static_prompt,single_subject,none,none,simple,a stop sign
+pd012,1,object_class,11,static_single_or_scene,static_prompt,single_subject,none,none,simple,a stop sign
+pd012,2,object_class,11,static_single_or_scene,static_prompt,single_subject,none,none,simple,a stop sign
+pd013,0,scene,0,static_single_or_scene,static_prompt,scene_only,none,none,simple,alley
+pd013,1,scene,0,static_single_or_scene,static_prompt,scene_only,none,none,simple,alley
+pd013,2,scene,0,static_single_or_scene,static_prompt,scene_only,none,none,simple,alley
+pd014,0,scene,1,static_single_or_scene,static_prompt,scene_only,none,none,simple,amusement park
+pd014,1,scene,1,static_single_or_scene,static_prompt,scene_only,none,none,simple,amusement park
+pd014,2,scene,1,static_single_or_scene,static_prompt,scene_only,none,none,simple,amusement park
+pd015,0,scene,2,static_single_or_scene,static_prompt,scene_only,none,none,simple,aquarium
+pd015,1,scene,2,static_single_or_scene,static_prompt,scene_only,none,none,simple,aquarium
+pd015,2,scene,2,static_single_or_scene,static_prompt,scene_only,none,none,simple,aquarium
+pd016,0,scene,3,static_single_or_scene,static_prompt,scene_only,none,none,simple,arch
+pd016,1,scene,3,static_single_or_scene,static_prompt,scene_only,none,none,simple,arch
+pd016,2,scene,3,static_single_or_scene,static_prompt,scene_only,none,none,simple,arch
+pd017,0,scene,4,static_single_or_scene,static_prompt,scene_only,none,none,simple,art gallery
+pd017,1,scene,4,static_single_or_scene,static_prompt,scene_only,none,none,simple,art gallery
+pd017,2,scene,4,static_single_or_scene,static_prompt,scene_only,none,none,simple,art gallery
+pd018,0,scene,5,static_single_or_scene,static_prompt,scene_only,none,none,simple,bathroom
+pd018,1,scene,5,static_single_or_scene,static_prompt,scene_only,none,none,simple,bathroom
+pd018,2,scene,5,static_single_or_scene,static_prompt,scene_only,none,none,simple,bathroom
+pd019,0,scene,6,static_single_or_scene,static_prompt,scene_only,none,none,simple,bakery shop
+pd019,1,scene,6,static_single_or_scene,static_prompt,scene_only,none,none,simple,bakery shop
+pd019,2,scene,6,static_single_or_scene,static_prompt,scene_only,none,none,simple,bakery shop
+pd020,0,scene,7,static_single_or_scene,static_prompt,scene_only,none,none,simple,ballroom
+pd020,1,scene,7,static_single_or_scene,static_prompt,scene_only,none,none,simple,ballroom
+pd020,2,scene,7,static_single_or_scene,static_prompt,scene_only,none,none,simple,ballroom
+pd021,0,scene,8,static_single_or_scene,static_prompt,scene_only,none,none,simple,bar
+pd021,1,scene,8,static_single_or_scene,static_prompt,scene_only,none,none,simple,bar
+pd021,2,scene,8,static_single_or_scene,static_prompt,scene_only,none,none,simple,bar
+pd022,0,scene,9,static_single_or_scene,static_prompt,scene_only,none,none,simple,barn
+pd022,1,scene,9,static_single_or_scene,static_prompt,scene_only,none,none,simple,barn
+pd022,2,scene,9,static_single_or_scene,static_prompt,scene_only,none,none,simple,barn
+pd023,0,scene,10,static_single_or_scene,static_prompt,scene_only,none,none,simple,basement
+pd023,1,scene,10,static_single_or_scene,static_prompt,scene_only,none,none,simple,basement
+pd023,2,scene,10,static_single_or_scene,static_prompt,scene_only,none,none,simple,basement
+pd024,0,scene,11,static_single_or_scene,static_prompt,scene_only,none,none,simple,beach
+pd024,1,scene,11,static_single_or_scene,static_prompt,scene_only,none,none,simple,beach
+pd024,2,scene,11,static_single_or_scene,static_prompt,scene_only,none,none,simple,beach
+pd025,0,multiple_objects,0,multi_object,static_prompt,two_subjects,co_presence,none,simple,a bird and a cat
+pd025,1,multiple_objects,0,multi_object,static_prompt,two_subjects,co_presence,none,simple,a bird and a cat
+pd025,2,multiple_objects,0,multi_object,static_prompt,two_subjects,co_presence,none,simple,a bird and a cat
+pd026,0,multiple_objects,1,multi_object,static_prompt,two_subjects,co_presence,none,simple,a cat and a dog
+pd026,1,multiple_objects,1,multi_object,static_prompt,two_subjects,co_presence,none,simple,a cat and a dog
+pd026,2,multiple_objects,1,multi_object,static_prompt,two_subjects,co_presence,none,simple,a cat and a dog
+pd027,0,multiple_objects,2,multi_object,static_prompt,two_subjects,co_presence,none,simple,a dog and a horse
+pd027,1,multiple_objects,2,multi_object,static_prompt,two_subjects,co_presence,none,simple,a dog and a horse
+pd027,2,multiple_objects,2,multi_object,static_prompt,two_subjects,co_presence,none,simple,a dog and a horse
+pd028,0,multiple_objects,3,multi_object,static_prompt,two_subjects,co_presence,none,simple,a horse and a sheep
+pd028,1,multiple_objects,3,multi_object,static_prompt,two_subjects,co_presence,none,simple,a horse and a sheep
+pd028,2,multiple_objects,3,multi_object,static_prompt,two_subjects,co_presence,none,simple,a horse and a sheep
+pd029,0,multiple_objects,4,multi_object,static_prompt,two_subjects,co_presence,none,simple,a sheep and a cow
+pd029,1,multiple_objects,4,multi_object,static_prompt,two_subjects,co_presence,none,simple,a sheep and a cow
+pd029,2,multiple_objects,4,multi_object,static_prompt,two_subjects,co_presence,none,simple,a sheep and a cow
+pd030,0,multiple_objects,5,multi_object,static_prompt,two_subjects,co_presence,none,simple,a cow and an elephant
+pd030,1,multiple_objects,5,multi_object,static_prompt,two_subjects,co_presence,none,simple,a cow and an elephant
+pd030,2,multiple_objects,5,multi_object,static_prompt,two_subjects,co_presence,none,simple,a cow and an elephant
+pd031,0,multiple_objects,6,multi_object,static_prompt,two_subjects,co_presence,none,simple,an elephant and a bear
+pd031,1,multiple_objects,6,multi_object,static_prompt,two_subjects,co_presence,none,simple,an elephant and a bear
+pd031,2,multiple_objects,6,multi_object,static_prompt,two_subjects,co_presence,none,simple,an elephant and a bear
+pd032,0,multiple_objects,7,multi_object,static_prompt,two_subjects,co_presence,none,simple,a bear and a zebra
+pd032,1,multiple_objects,7,multi_object,static_prompt,two_subjects,co_presence,none,simple,a bear and a zebra
+pd032,2,multiple_objects,7,multi_object,static_prompt,two_subjects,co_presence,none,simple,a bear and a zebra
+pd033,0,multiple_objects,8,multi_object,static_prompt,two_subjects,co_presence,none,simple,a zebra and a giraffe
+pd033,1,multiple_objects,8,multi_object,static_prompt,two_subjects,co_presence,none,simple,a zebra and a giraffe
+pd033,2,multiple_objects,8,multi_object,static_prompt,two_subjects,co_presence,none,simple,a zebra and a giraffe
+pd034,0,multiple_objects,9,multi_object,static_prompt,two_subjects,co_presence,none,simple,a giraffe and a bird
+pd034,1,multiple_objects,9,multi_object,static_prompt,two_subjects,co_presence,none,simple,a giraffe and a bird
+pd034,2,multiple_objects,9,multi_object,static_prompt,two_subjects,co_presence,none,simple,a giraffe and a bird
+pd035,0,multiple_objects,10,multi_object,static_prompt,two_subjects,co_presence,none,simple,a chair and a couch
+pd035,1,multiple_objects,10,multi_object,static_prompt,two_subjects,co_presence,none,simple,a chair and a couch
+pd035,2,multiple_objects,10,multi_object,static_prompt,two_subjects,co_presence,none,simple,a chair and a couch
+pd036,0,multiple_objects,11,multi_object,static_prompt,two_subjects,co_presence,none,simple,a couch and a potted plant
+pd036,1,multiple_objects,11,multi_object,static_prompt,two_subjects,co_presence,none,simple,a couch and a potted plant
+pd036,2,multiple_objects,11,multi_object,static_prompt,two_subjects,co_presence,none,simple,a couch and a potted plant
+pd037,0,multiple_objects,12,multi_object,static_prompt,two_subjects,co_presence,none,simple,a potted plant and a tv
+pd037,1,multiple_objects,12,multi_object,static_prompt,two_subjects,co_presence,none,simple,a potted plant and a tv
+pd037,2,multiple_objects,12,multi_object,static_prompt,two_subjects,co_presence,none,simple,a potted plant and a tv
+pd038,0,multiple_objects,13,multi_object,static_prompt,two_subjects,co_presence,none,simple,a tv and a laptop
+pd038,1,multiple_objects,13,multi_object,static_prompt,two_subjects,co_presence,none,simple,a tv and a laptop
+pd038,2,multiple_objects,13,multi_object,static_prompt,two_subjects,co_presence,none,simple,a tv and a laptop
+pd039,0,multiple_objects,14,multi_object,static_prompt,two_subjects,co_presence,none,simple,a laptop and a remote
+pd039,1,multiple_objects,14,multi_object,static_prompt,two_subjects,co_presence,none,simple,a laptop and a remote
+pd039,2,multiple_objects,14,multi_object,static_prompt,two_subjects,co_presence,none,simple,a laptop and a remote
+pd040,0,multiple_objects,15,multi_object,static_prompt,two_subjects,co_presence,none,simple,a remote and a keyboard
+pd040,1,multiple_objects,15,multi_object,static_prompt,two_subjects,co_presence,none,simple,a remote and a keyboard
+pd040,2,multiple_objects,15,multi_object,static_prompt,two_subjects,co_presence,none,simple,a remote and a keyboard
+pd041,0,spatial_relationship,0,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a bicycle on the left of a car, front view"
+pd041,1,spatial_relationship,0,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a bicycle on the left of a car, front view"
+pd041,2,spatial_relationship,0,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a bicycle on the left of a car, front view"
+pd042,0,spatial_relationship,1,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a car on the right of a motorcycle, front view"
+pd042,1,spatial_relationship,1,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a car on the right of a motorcycle, front view"
+pd042,2,spatial_relationship,1,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a car on the right of a motorcycle, front view"
+pd043,0,spatial_relationship,2,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a motorcycle on the left of a bus, front view"
+pd043,1,spatial_relationship,2,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a motorcycle on the left of a bus, front view"
+pd043,2,spatial_relationship,2,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a motorcycle on the left of a bus, front view"
+pd044,0,spatial_relationship,3,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a bus on the right of a traffic light, front view"
+pd044,1,spatial_relationship,3,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a bus on the right of a traffic light, front view"
+pd044,2,spatial_relationship,3,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a bus on the right of a traffic light, front view"
+pd045,0,spatial_relationship,4,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a traffic light on the left of a fire hydrant, front view"
+pd045,1,spatial_relationship,4,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a traffic light on the left of a fire hydrant, front view"
+pd045,2,spatial_relationship,4,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a traffic light on the left of a fire hydrant, front view"
+pd046,0,spatial_relationship,5,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a fire hydrant on the right of a stop sign, front view"
+pd046,1,spatial_relationship,5,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a fire hydrant on the right of a stop sign, front view"
+pd046,2,spatial_relationship,5,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a fire hydrant on the right of a stop sign, front view"
+pd047,0,spatial_relationship,6,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a stop sign on the left of a parking meter, front view"
+pd047,1,spatial_relationship,6,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a stop sign on the left of a parking meter, front view"
+pd047,2,spatial_relationship,6,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a stop sign on the left of a parking meter, front view"
+pd048,0,spatial_relationship,7,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a parking meter on the right of a bench, front view"
+pd048,1,spatial_relationship,7,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a parking meter on the right of a bench, front view"
+pd048,2,spatial_relationship,7,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a parking meter on the right of a bench, front view"
+pd049,0,spatial_relationship,8,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a bench on the left of a truck, front view"
+pd049,1,spatial_relationship,8,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a bench on the left of a truck, front view"
+pd049,2,spatial_relationship,8,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a bench on the left of a truck, front view"
+pd050,0,spatial_relationship,9,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a truck on the right of a bicycle, front view"
+pd050,1,spatial_relationship,9,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a truck on the right of a bicycle, front view"
+pd050,2,spatial_relationship,9,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a truck on the right of a bicycle, front view"
+pd051,0,spatial_relationship,10,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a bird on the left of a cat, front view"
+pd051,1,spatial_relationship,10,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a bird on the left of a cat, front view"
+pd051,2,spatial_relationship,10,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a bird on the left of a cat, front view"
+pd052,0,spatial_relationship,11,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a cat on the right of a dog, front view"
+pd052,1,spatial_relationship,11,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a cat on the right of a dog, front view"
+pd052,2,spatial_relationship,11,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a cat on the right of a dog, front view"
+pd053,0,spatial_relationship,12,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a dog on the left of a horse, front view"
+pd053,1,spatial_relationship,12,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a dog on the left of a horse, front view"
+pd053,2,spatial_relationship,12,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a dog on the left of a horse, front view"
+pd054,0,spatial_relationship,13,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a horse on the right of a sheep, front view"
+pd054,1,spatial_relationship,13,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a horse on the right of a sheep, front view"
+pd054,2,spatial_relationship,13,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a horse on the right of a sheep, front view"
+pd055,0,spatial_relationship,14,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a sheep on the left of a cow, front view"
+pd055,1,spatial_relationship,14,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a sheep on the left of a cow, front view"
+pd055,2,spatial_relationship,14,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a sheep on the left of a cow, front view"
+pd056,0,spatial_relationship,15,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a cow on the right of an elephant, front view"
+pd056,1,spatial_relationship,15,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a cow on the right of an elephant, front view"
+pd056,2,spatial_relationship,15,spatial_relation,static_prompt,two_subjects,explicit_spatial_relation,none,moderate,"a cow on the right of an elephant, front view"
+pd057,0,human_action,0,human_action,human_motion,single_person,none,none,moderate,A person is riding a bike
+pd057,1,human_action,0,human_action,human_motion,single_person,none,none,moderate,A person is riding a bike
+pd057,2,human_action,0,human_action,human_motion,single_person,none,none,moderate,A person is riding a bike
+pd058,0,human_action,1,human_action,human_motion,single_person,none,none,moderate,A person is marching
+pd058,1,human_action,1,human_action,human_motion,single_person,none,none,moderate,A person is marching
+pd058,2,human_action,1,human_action,human_motion,single_person,none,none,moderate,A person is marching
+pd059,0,human_action,2,human_action,human_motion,single_person,none,none,moderate,A person is roller skating
+pd059,1,human_action,2,human_action,human_motion,single_person,none,none,moderate,A person is roller skating
+pd059,2,human_action,2,human_action,human_motion,single_person,none,none,moderate,A person is roller skating
+pd060,0,human_action,3,human_action,human_motion,single_person,none,none,moderate,A person is tasting beer
+pd060,1,human_action,3,human_action,human_motion,single_person,none,none,moderate,A person is tasting beer
+pd060,2,human_action,3,human_action,human_motion,single_person,none,none,moderate,A person is tasting beer
+pd061,0,human_action,4,human_action,human_motion,single_person,none,none,moderate,A person is clapping
+pd061,1,human_action,4,human_action,human_motion,single_person,none,none,moderate,A person is clapping
+pd061,2,human_action,4,human_action,human_motion,single_person,none,none,moderate,A person is clapping
+pd062,0,human_action,5,human_action,human_motion,single_person,none,none,moderate,A person is drawing
+pd062,1,human_action,5,human_action,human_motion,single_person,none,none,moderate,A person is drawing
+pd062,2,human_action,5,human_action,human_motion,single_person,none,none,moderate,A person is drawing
+pd063,0,human_action,6,human_action,human_motion,single_person,none,none,moderate,A person is petting animal (not cat)
+pd063,1,human_action,6,human_action,human_motion,single_person,none,none,moderate,A person is petting animal (not cat)
+pd063,2,human_action,6,human_action,human_motion,single_person,none,none,moderate,A person is petting animal (not cat)
+pd064,0,human_action,7,human_action,human_motion,single_person,none,none,moderate,A person is eating watermelon
+pd064,1,human_action,7,human_action,human_motion,single_person,none,none,moderate,A person is eating watermelon
+pd064,2,human_action,7,human_action,human_motion,single_person,none,none,moderate,A person is eating watermelon
+pd065,0,human_action,8,human_action,human_motion,single_person,none,none,moderate,A person is playing harp
+pd065,1,human_action,8,human_action,human_motion,single_person,none,none,moderate,A person is playing harp
+pd065,2,human_action,8,human_action,human_motion,single_person,none,none,moderate,A person is playing harp
+pd066,0,human_action,9,human_action,human_motion,single_person,none,none,moderate,A person is wrestling
+pd066,1,human_action,9,human_action,human_motion,single_person,none,none,moderate,A person is wrestling
+pd066,2,human_action,9,human_action,human_motion,single_person,none,none,moderate,A person is wrestling
+pd067,0,human_action,10,human_action,human_motion,single_person,none,none,moderate,A person is riding scooter
+pd067,1,human_action,10,human_action,human_motion,single_person,none,none,moderate,A person is riding scooter
+pd067,2,human_action,10,human_action,human_motion,single_person,none,none,moderate,A person is riding scooter
+pd068,0,human_action,11,human_action,human_motion,single_person,none,none,moderate,A person is sweeping floor
+pd068,1,human_action,11,human_action,human_motion,single_person,none,none,moderate,A person is sweeping floor
+pd068,2,human_action,11,human_action,human_motion,single_person,none,none,moderate,A person is sweeping floor
+pd069,0,human_action,12,human_action,human_motion,single_person,none,none,moderate,A person is skateboarding
+pd069,1,human_action,12,human_action,human_motion,single_person,none,none,moderate,A person is skateboarding
+pd069,2,human_action,12,human_action,human_motion,single_person,none,none,moderate,A person is skateboarding
+pd070,0,human_action,13,human_action,human_motion,single_person,none,none,moderate,A person is dunking basketball
+pd070,1,human_action,13,human_action,human_motion,single_person,none,none,moderate,A person is dunking basketball
+pd070,2,human_action,13,human_action,human_motion,single_person,none,none,moderate,A person is dunking basketball
+pd071,0,human_action,14,human_action,human_motion,single_person,none,none,moderate,A person is playing flute
+pd071,1,human_action,14,human_action,human_motion,single_person,none,none,moderate,A person is playing flute
+pd071,2,human_action,14,human_action,human_motion,single_person,none,none,moderate,A person is playing flute
+pd072,0,human_action,15,human_action,human_motion,single_person,none,none,moderate,A person is stretching leg
+pd072,1,human_action,15,human_action,human_motion,single_person,none,none,moderate,A person is stretching leg
+pd072,2,human_action,15,human_action,human_motion,single_person,none,none,moderate,A person is stretching leg
+pd073,0,human_action,16,human_action,human_motion,single_person,none,none,moderate,A person is tying tie
+pd073,1,human_action,16,human_action,human_motion,single_person,none,none,moderate,A person is tying tie
+pd073,2,human_action,16,human_action,human_motion,single_person,none,none,moderate,A person is tying tie
+pd074,0,human_action,17,human_action,human_motion,single_person,none,none,moderate,A person is skydiving
+pd074,1,human_action,17,human_action,human_motion,single_person,none,none,moderate,A person is skydiving
+pd074,2,human_action,17,human_action,human_motion,single_person,none,none,moderate,A person is skydiving
+pd075,0,human_action,18,human_action,human_motion,single_person,none,none,moderate,A person is shooting goal (soccer)
+pd075,1,human_action,18,human_action,human_motion,single_person,none,none,moderate,A person is shooting goal (soccer)
+pd075,2,human_action,18,human_action,human_motion,single_person,none,none,moderate,A person is shooting goal (soccer)
+pd076,0,human_action,19,human_action,human_motion,single_person,none,none,moderate,A person is playing piano
+pd076,1,human_action,19,human_action,human_motion,single_person,none,none,moderate,A person is playing piano
+pd076,2,human_action,19,human_action,human_motion,single_person,none,none,moderate,A person is playing piano
+pd077,0,subject_consistency,0,subject_motion,subject_motion,single_person,none,none,moderate,a person swimming in ocean
+pd077,1,subject_consistency,0,subject_motion,subject_motion,single_person,none,none,moderate,a person swimming in ocean
+pd077,2,subject_consistency,0,subject_motion,subject_motion,single_person,none,none,moderate,a person swimming in ocean
+pd078,0,subject_consistency,1,subject_motion,subject_motion,multi_subject,none,none,moderate,a person giving a presentation to a room full of colleagues
+pd078,1,subject_consistency,1,subject_motion,subject_motion,multi_subject,none,none,moderate,a person giving a presentation to a room full of colleagues
+pd078,2,subject_consistency,1,subject_motion,subject_motion,multi_subject,none,none,moderate,a person giving a presentation to a room full of colleagues
+pd079,0,subject_consistency,2,subject_motion,subject_motion,single_person,none,none,moderate,a person washing the dishes
+pd079,1,subject_consistency,2,subject_motion,subject_motion,single_person,none,none,moderate,a person washing the dishes
+pd079,2,subject_consistency,2,subject_motion,subject_motion,single_person,none,none,moderate,a person washing the dishes
+pd080,0,subject_consistency,3,subject_motion,subject_motion,single_person,none,none,moderate,a person eating a burger
+pd080,1,subject_consistency,3,subject_motion,subject_motion,single_person,none,none,moderate,a person eating a burger
+pd080,2,subject_consistency,3,subject_motion,subject_motion,single_person,none,none,moderate,a person eating a burger
+pd081,0,subject_consistency,4,subject_motion,subject_motion,single_person,none,none,moderate,a person walking in the snowstorm
+pd081,1,subject_consistency,4,subject_motion,subject_motion,single_person,none,none,moderate,a person walking in the snowstorm
+pd081,2,subject_consistency,4,subject_motion,subject_motion,single_person,none,none,moderate,a person walking in the snowstorm
+pd082,0,subject_consistency,5,subject_motion,subject_motion,single_person,none,none,moderate,a person drinking coffee in a cafe
+pd082,1,subject_consistency,5,subject_motion,subject_motion,single_person,none,none,moderate,a person drinking coffee in a cafe
+pd082,2,subject_consistency,5,subject_motion,subject_motion,single_person,none,none,moderate,a person drinking coffee in a cafe
+pd083,0,subject_consistency,6,subject_motion,subject_motion,single_person,none,none,moderate,a person playing guitar
+pd083,1,subject_consistency,6,subject_motion,subject_motion,single_person,none,none,moderate,a person playing guitar
+pd083,2,subject_consistency,6,subject_motion,subject_motion,single_person,none,none,moderate,a person playing guitar
+pd084,0,subject_consistency,7,subject_motion,subject_motion,single_subject,none,none,moderate,a bicycle leaning against a tree
+pd084,1,subject_consistency,7,subject_motion,subject_motion,single_subject,none,none,moderate,a bicycle leaning against a tree
+pd084,2,subject_consistency,7,subject_motion,subject_motion,single_subject,none,none,moderate,a bicycle leaning against a tree
+pd085,0,subject_consistency,8,subject_motion,subject_motion,single_subject,none,none,moderate,a bicycle gliding through a snowy field
+pd085,1,subject_consistency,8,subject_motion,subject_motion,single_subject,none,none,moderate,a bicycle gliding through a snowy field
+pd085,2,subject_consistency,8,subject_motion,subject_motion,single_subject,none,none,moderate,a bicycle gliding through a snowy field
+pd086,0,subject_consistency,9,subject_motion,subject_motion,single_subject,none,none,moderate,a bicycle slowing down to stop
+pd086,1,subject_consistency,9,subject_motion,subject_motion,single_subject,none,none,moderate,a bicycle slowing down to stop
+pd086,2,subject_consistency,9,subject_motion,subject_motion,single_subject,none,none,moderate,a bicycle slowing down to stop
+pd087,0,subject_consistency,10,subject_motion,subject_motion,single_subject,none,none,moderate,a bicycle accelerating to gain speed
+pd087,1,subject_consistency,10,subject_motion,subject_motion,single_subject,none,none,moderate,a bicycle accelerating to gain speed
+pd087,2,subject_consistency,10,subject_motion,subject_motion,single_subject,none,none,moderate,a bicycle accelerating to gain speed
+pd088,0,subject_consistency,11,subject_motion,subject_motion,single_subject,none,none,moderate,a car stuck in traffic during rush hour
+pd088,1,subject_consistency,11,subject_motion,subject_motion,single_subject,none,none,moderate,a car stuck in traffic during rush hour
+pd088,2,subject_consistency,11,subject_motion,subject_motion,single_subject,none,none,moderate,a car stuck in traffic during rush hour
+pd089,0,subject_consistency,12,subject_motion,subject_motion,single_subject,none,none,moderate,a car turning a corner
+pd089,1,subject_consistency,12,subject_motion,subject_motion,single_subject,none,none,moderate,a car turning a corner
+pd089,2,subject_consistency,12,subject_motion,subject_motion,single_subject,none,none,moderate,a car turning a corner
+pd090,0,subject_consistency,13,subject_motion,subject_motion,single_subject,none,none,moderate,a car slowing down to stop
+pd090,1,subject_consistency,13,subject_motion,subject_motion,single_subject,none,none,moderate,a car slowing down to stop
+pd090,2,subject_consistency,13,subject_motion,subject_motion,single_subject,none,none,moderate,a car slowing down to stop
+pd091,0,subject_consistency,14,subject_motion,subject_motion,single_subject,none,none,moderate,a car accelerating to gain speed
+pd091,1,subject_consistency,14,subject_motion,subject_motion,single_subject,none,none,moderate,a car accelerating to gain speed
+pd091,2,subject_consistency,14,subject_motion,subject_motion,single_subject,none,none,moderate,a car accelerating to gain speed
+pd092,0,subject_consistency,15,subject_motion,subject_motion,single_subject,none,none,moderate,a motorcycle cruising along a coastal highway
+pd092,1,subject_consistency,15,subject_motion,subject_motion,single_subject,none,none,moderate,a motorcycle cruising along a coastal highway
+pd092,2,subject_consistency,15,subject_motion,subject_motion,single_subject,none,none,moderate,a motorcycle cruising along a coastal highway
+pd093,0,subject_consistency,16,subject_motion,subject_motion,single_subject,none,none,moderate,a motorcycle turning a corner
+pd093,1,subject_consistency,16,subject_motion,subject_motion,single_subject,none,none,moderate,a motorcycle turning a corner
+pd093,2,subject_consistency,16,subject_motion,subject_motion,single_subject,none,none,moderate,a motorcycle turning a corner
+pd094,0,subject_consistency,17,subject_motion,subject_motion,single_subject,none,none,moderate,a motorcycle slowing down to stop
+pd094,1,subject_consistency,17,subject_motion,subject_motion,single_subject,none,none,moderate,a motorcycle slowing down to stop
+pd094,2,subject_consistency,17,subject_motion,subject_motion,single_subject,none,none,moderate,a motorcycle slowing down to stop
+pd095,0,subject_consistency,18,subject_motion,subject_motion,single_subject,none,none,moderate,a motorcycle gliding through a snowy field
+pd095,1,subject_consistency,18,subject_motion,subject_motion,single_subject,none,none,moderate,a motorcycle gliding through a snowy field
+pd095,2,subject_consistency,18,subject_motion,subject_motion,single_subject,none,none,moderate,a motorcycle gliding through a snowy field
+pd096,0,subject_consistency,19,subject_motion,subject_motion,single_subject,none,none,moderate,a motorcycle accelerating to gain speed
+pd096,1,subject_consistency,19,subject_motion,subject_motion,single_subject,none,none,moderate,a motorcycle accelerating to gain speed
+pd096,2,subject_consistency,19,subject_motion,subject_motion,single_subject,none,none,moderate,a motorcycle accelerating to gain speed
+pd097,0,temporal_style,0,camera_motion,low_or_stylized_motion,single_subject,none,slow_motion,moderate,"A beautiful coastal beach in spring, waves lapping on sand, in super slow motion"
+pd097,1,temporal_style,0,camera_motion,low_or_stylized_motion,single_subject,none,slow_motion,moderate,"A beautiful coastal beach in spring, waves lapping on sand, in super slow motion"
+pd097,2,temporal_style,0,camera_motion,low_or_stylized_motion,single_subject,none,slow_motion,moderate,"A beautiful coastal beach in spring, waves lapping on sand, in super slow motion"
+pd098,0,temporal_style,1,camera_motion,camera_motion,single_subject,none,zoom_in,moderate,"A beautiful coastal beach in spring, waves lapping on sand, zoom in"
+pd098,1,temporal_style,1,camera_motion,camera_motion,single_subject,none,zoom_in,moderate,"A beautiful coastal beach in spring, waves lapping on sand, zoom in"
+pd098,2,temporal_style,1,camera_motion,camera_motion,single_subject,none,zoom_in,moderate,"A beautiful coastal beach in spring, waves lapping on sand, zoom in"
+pd099,0,temporal_style,2,camera_motion,camera_motion,single_subject,none,zoom_out,moderate,"A beautiful coastal beach in spring, waves lapping on sand, zoom out"
+pd099,1,temporal_style,2,camera_motion,camera_motion,single_subject,none,zoom_out,moderate,"A beautiful coastal beach in spring, waves lapping on sand, zoom out"
+pd099,2,temporal_style,2,camera_motion,camera_motion,single_subject,none,zoom_out,moderate,"A beautiful coastal beach in spring, waves lapping on sand, zoom out"
+pd100,0,temporal_style,3,camera_motion,camera_motion,single_subject,none,pan_left,moderate,"A beautiful coastal beach in spring, waves lapping on sand, pan left"
+pd100,1,temporal_style,3,camera_motion,camera_motion,single_subject,none,pan_left,moderate,"A beautiful coastal beach in spring, waves lapping on sand, pan left"
+pd100,2,temporal_style,3,camera_motion,camera_motion,single_subject,none,pan_left,moderate,"A beautiful coastal beach in spring, waves lapping on sand, pan left"
+pd101,0,temporal_style,4,camera_motion,camera_motion,single_subject,none,pan_right,moderate,"A beautiful coastal beach in spring, waves lapping on sand, pan right"
+pd101,1,temporal_style,4,camera_motion,camera_motion,single_subject,none,pan_right,moderate,"A beautiful coastal beach in spring, waves lapping on sand, pan right"
+pd101,2,temporal_style,4,camera_motion,camera_motion,single_subject,none,pan_right,moderate,"A beautiful coastal beach in spring, waves lapping on sand, pan right"
+pd102,0,temporal_style,5,camera_motion,camera_motion,single_subject,none,tilt_up,moderate,"A beautiful coastal beach in spring, waves lapping on sand, tilt up"
+pd102,1,temporal_style,5,camera_motion,camera_motion,single_subject,none,tilt_up,moderate,"A beautiful coastal beach in spring, waves lapping on sand, tilt up"
+pd102,2,temporal_style,5,camera_motion,camera_motion,single_subject,none,tilt_up,moderate,"A beautiful coastal beach in spring, waves lapping on sand, tilt up"
+pd103,0,temporal_style,6,camera_motion,camera_motion,single_subject,none,tilt_down,moderate,"A beautiful coastal beach in spring, waves lapping on sand, tilt down"
+pd103,1,temporal_style,6,camera_motion,camera_motion,single_subject,none,tilt_down,moderate,"A beautiful coastal beach in spring, waves lapping on sand, tilt down"
+pd103,2,temporal_style,6,camera_motion,camera_motion,single_subject,none,tilt_down,moderate,"A beautiful coastal beach in spring, waves lapping on sand, tilt down"
+pd104,0,temporal_style,7,camera_motion,camera_motion,single_subject,none,shake,moderate,"A beautiful coastal beach in spring, waves lapping on sand, with an intense shaking effect"
+pd104,1,temporal_style,7,camera_motion,camera_motion,single_subject,none,shake,moderate,"A beautiful coastal beach in spring, waves lapping on sand, with an intense shaking effect"
+pd104,2,temporal_style,7,camera_motion,camera_motion,single_subject,none,shake,moderate,"A beautiful coastal beach in spring, waves lapping on sand, with an intense shaking effect"
+pd105,0,temporal_style,8,camera_motion,low_or_stylized_motion,single_subject,none,steady,moderate,"A beautiful coastal beach in spring, waves lapping on sand, featuring a steady and smooth perspective"
+pd105,1,temporal_style,8,camera_motion,low_or_stylized_motion,single_subject,none,steady,moderate,"A beautiful coastal beach in spring, waves lapping on sand, featuring a steady and smooth perspective"
+pd105,2,temporal_style,8,camera_motion,low_or_stylized_motion,single_subject,none,steady,moderate,"A beautiful coastal beach in spring, waves lapping on sand, featuring a steady and smooth perspective"
+pd106,0,temporal_style,9,camera_motion,camera_motion,single_subject,none,racking_focus,moderate,"A beautiful coastal beach in spring, waves lapping on sand, racking focus"
+pd106,1,temporal_style,9,camera_motion,camera_motion,single_subject,none,racking_focus,moderate,"A beautiful coastal beach in spring, waves lapping on sand, racking focus"
+pd106,2,temporal_style,9,camera_motion,camera_motion,single_subject,none,racking_focus,moderate,"A beautiful coastal beach in spring, waves lapping on sand, racking focus"
+pd107,0,temporal_style,10,camera_motion,low_or_stylized_motion,single_subject,none,slow_motion,moderate,"The bund Shanghai, in super slow motion"
+pd107,1,temporal_style,10,camera_motion,low_or_stylized_motion,single_subject,none,slow_motion,moderate,"The bund Shanghai, in super slow motion"
+pd107,2,temporal_style,10,camera_motion,low_or_stylized_motion,single_subject,none,slow_motion,moderate,"The bund Shanghai, in super slow motion"
+pd108,0,temporal_style,11,camera_motion,camera_motion,single_subject,none,zoom_in,moderate,"The bund Shanghai, zoom in"
+pd108,1,temporal_style,11,camera_motion,camera_motion,single_subject,none,zoom_in,moderate,"The bund Shanghai, zoom in"
+pd108,2,temporal_style,11,camera_motion,camera_motion,single_subject,none,zoom_in,moderate,"The bund Shanghai, zoom in"
+pd109,0,temporal_style,12,camera_motion,camera_motion,single_subject,none,zoom_out,moderate,"The bund Shanghai, zoom out"
+pd109,1,temporal_style,12,camera_motion,camera_motion,single_subject,none,zoom_out,moderate,"The bund Shanghai, zoom out"
+pd109,2,temporal_style,12,camera_motion,camera_motion,single_subject,none,zoom_out,moderate,"The bund Shanghai, zoom out"
+pd110,0,temporal_style,13,camera_motion,camera_motion,single_subject,none,pan_left,moderate,"The bund Shanghai, pan left"
+pd110,1,temporal_style,13,camera_motion,camera_motion,single_subject,none,pan_left,moderate,"The bund Shanghai, pan left"
+pd110,2,temporal_style,13,camera_motion,camera_motion,single_subject,none,pan_left,moderate,"The bund Shanghai, pan left"
+pd111,0,temporal_style,14,camera_motion,camera_motion,single_subject,none,pan_right,moderate,"The bund Shanghai, pan right"
+pd111,1,temporal_style,14,camera_motion,camera_motion,single_subject,none,pan_right,moderate,"The bund Shanghai, pan right"
+pd111,2,temporal_style,14,camera_motion,camera_motion,single_subject,none,pan_right,moderate,"The bund Shanghai, pan right"
+pd112,0,temporal_style,15,camera_motion,camera_motion,single_subject,none,tilt_up,moderate,"The bund Shanghai, tilt up"
+pd112,1,temporal_style,15,camera_motion,camera_motion,single_subject,none,tilt_up,moderate,"The bund Shanghai, tilt up"
+pd112,2,temporal_style,15,camera_motion,camera_motion,single_subject,none,tilt_up,moderate,"The bund Shanghai, tilt up"
+pd113,0,overall_consistency,0,mixed_story,mixed_motion,single_subject,none,none,complex,Close up of grapes on a rotating table.
+pd113,1,overall_consistency,0,mixed_story,mixed_motion,single_subject,none,none,complex,Close up of grapes on a rotating table.
+pd113,2,overall_consistency,0,mixed_story,mixed_motion,single_subject,none,none,complex,Close up of grapes on a rotating table.
+pd114,0,overall_consistency,1,mixed_story,mixed_motion,single_subject,none,none,complex,Turtle swimming in ocean.
+pd114,1,overall_consistency,1,mixed_story,mixed_motion,single_subject,none,none,complex,Turtle swimming in ocean.
+pd114,2,overall_consistency,1,mixed_story,mixed_motion,single_subject,none,none,complex,Turtle swimming in ocean.
+pd115,0,overall_consistency,2,mixed_story,mixed_motion,single_subject,none,none,complex,A storm trooper vacuuming the beach.
+pd115,1,overall_consistency,2,mixed_story,mixed_motion,single_subject,none,none,complex,A storm trooper vacuuming the beach.
+pd115,2,overall_consistency,2,mixed_story,mixed_motion,single_subject,none,none,complex,A storm trooper vacuuming the beach.
+pd116,0,overall_consistency,3,mixed_story,mixed_motion,single_subject,none,none,complex,A panda standing on a surfboard in the ocean in sunset.
+pd116,1,overall_consistency,3,mixed_story,mixed_motion,single_subject,none,none,complex,A panda standing on a surfboard in the ocean in sunset.
+pd116,2,overall_consistency,3,mixed_story,mixed_motion,single_subject,none,none,complex,A panda standing on a surfboard in the ocean in sunset.
+pd117,0,overall_consistency,4,mixed_story,mixed_motion,single_subject,none,none,complex,"An astronaut feeding ducks on a sunny afternoon, reflection from the water."
+pd117,1,overall_consistency,4,mixed_story,mixed_motion,single_subject,none,none,complex,"An astronaut feeding ducks on a sunny afternoon, reflection from the water."
+pd117,2,overall_consistency,4,mixed_story,mixed_motion,single_subject,none,none,complex,"An astronaut feeding ducks on a sunny afternoon, reflection from the water."
+pd118,0,overall_consistency,5,mixed_story,mixed_motion,multi_subject,none,none,complex,Two pandas discussing an academic paper.
+pd118,1,overall_consistency,5,mixed_story,mixed_motion,multi_subject,none,none,complex,Two pandas discussing an academic paper.
+pd118,2,overall_consistency,5,mixed_story,mixed_motion,multi_subject,none,none,complex,Two pandas discussing an academic paper.
+pd119,0,overall_consistency,6,mixed_story,mixed_motion,single_subject,none,none,complex,Sunset time lapse at the beach with moving clouds and colors in the sky.
+pd119,1,overall_consistency,6,mixed_story,mixed_motion,single_subject,none,none,complex,Sunset time lapse at the beach with moving clouds and colors in the sky.
+pd119,2,overall_consistency,6,mixed_story,mixed_motion,single_subject,none,none,complex,Sunset time lapse at the beach with moving clouds and colors in the sky.
+pd120,0,overall_consistency,7,mixed_story,mixed_motion,single_subject,none,none,complex,A fat rabbit wearing a purple robe walking through a fantasy landscape.
+pd120,1,overall_consistency,7,mixed_story,mixed_motion,single_subject,none,none,complex,A fat rabbit wearing a purple robe walking through a fantasy landscape.
+pd120,2,overall_consistency,7,mixed_story,mixed_motion,single_subject,none,none,complex,A fat rabbit wearing a purple robe walking through a fantasy landscape.
