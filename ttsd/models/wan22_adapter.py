@@ -18,6 +18,7 @@ from ttsd.search.late_branching import (
     LateBranchConfig,
     denoising_step_equivalents,
     fork_latents,
+    renoise_latents,
     sigma_after_step,
 )
 
@@ -112,6 +113,15 @@ class LateBranchGenerationOutput:
     branch_sigma: float
     denoising_step_equivalents: int
     posterior_means_by_step: dict[int, torch.Tensor] = field(default_factory=dict)
+
+
+@dataclass
+class RenoiseGenerationOutput:
+    frames_by_amplitude: list
+    amplitudes: tuple[float, ...]
+    branch_step: int
+    branch_sigma: float
+    noise_seed: int
 
 
 class Wan22Adapter:
@@ -350,6 +360,123 @@ class Wan22Adapter:
         # `result.frames` is typically (B, T, H, W, 3) for video pipelines.
         frames = result.frames[0] if hasattr(result, "frames") else result[0]
         return GenerationOutput(frames=frames, latents_by_step=captured)
+
+    @torch.no_grad()
+    def generate_with_renoise_branches(
+        self,
+        prompt: str,
+        seed: int,
+        amplitudes: Iterable[float],
+        branch_step: int = 2,
+        noise_seed: int = 10_000_000,
+        num_frames: int = 81,
+        height: int = 480,
+        width: int = 832,
+        num_inference_steps: int = 50,
+        guidance_scale: float = 5.0,
+        decode_batch_size: int = 8,
+    ) -> RenoiseGenerationOutput:
+        """Fork one trajectory by rotating its implied noise after a step."""
+
+        if not 1 <= branch_step < num_inference_steps:
+            raise ValueError("branch_step must be in [1, num_inference_steps - 1]")
+        amplitudes = tuple(float(amplitude) for amplitude in amplitudes)
+        self._load()
+        branch_sigma: float | None = None
+        branch_posterior: torch.Tensor | None = None
+        original_step = self._pipe.scheduler.step
+        scheduler_step_idx = 0
+
+        def wrapped_step(*args, **kwargs):
+            nonlocal branch_posterior, scheduler_step_idx
+            model_output = args[0] if args else kwargs["model_output"]
+            timestep = args[1] if len(args) >= 2 else kwargs.get("timestep")
+            if len(args) >= 3:
+                sample = args[2]
+            elif "sample" in kwargs:
+                sample = kwargs["sample"]
+            else:
+                raise RuntimeError(
+                    "scheduler.step called without a recognizable `sample` arg"
+                )
+
+            sched = self._pipe.scheduler
+            if scheduler_step_idx == branch_step - 1:
+                if getattr(sched, "step_index", None) is None and hasattr(
+                    sched, "_init_step_index"
+                ):
+                    sched._init_step_index(timestep)
+                branch_posterior = _posterior_mean_from_step(
+                    sched, model_output, sample, scheduler_step_idx
+                )
+
+            result = original_step(*args, **kwargs)
+            scheduler_step_idx += 1
+            return result
+
+        def _cb(pipe, step_idx, timestep, callback_kwargs):
+            del timestep
+            nonlocal branch_sigma
+            if step_idx != branch_step - 1:
+                return callback_kwargs
+            if branch_posterior is None:
+                raise RuntimeError("Step posterior was not captured before RENOISE")
+
+            branch_sigma = sigma_after_step(pipe.scheduler, step_idx)
+            callback_kwargs["latents"] = renoise_latents(
+                callback_kwargs["latents"],
+                posterior=branch_posterior,
+                sigma=branch_sigma,
+                amplitudes=amplitudes,
+                noise_seed=noise_seed,
+            )
+            for key in ("prompt_embeds", "negative_prompt_embeds"):
+                embeds = callback_kwargs.get(key)
+                if embeds is not None:
+                    callback_kwargs[key] = embeds.repeat_interleave(
+                        len(amplitudes), dim=0
+                    )
+            return callback_kwargs
+
+        self._pipe.scheduler.step = wrapped_step
+        try:
+            generator = torch.Generator(device=self.device).manual_seed(seed)
+            result = self._pipe(
+                prompt=prompt,
+                num_frames=num_frames,
+                height=height,
+                width=width,
+                num_inference_steps=num_inference_steps,
+                guidance_scale=guidance_scale,
+                generator=generator,
+                callback_on_step_end=_cb,
+                callback_on_step_end_tensor_inputs=[
+                    "latents",
+                    "prompt_embeds",
+                    "negative_prompt_embeds",
+                ],
+                output_type="latent",
+            )
+        finally:
+            self._pipe.scheduler.step = original_step
+
+        if branch_sigma is None:
+            raise RuntimeError("RENOISE callback was never reached")
+        final_latents = result.frames if hasattr(result, "frames") else result[0]
+        if len(final_latents) != len(amplitudes):
+            raise RuntimeError(
+                "pipeline returned an unexpected number of final latents: "
+                f"expected {len(amplitudes)}, got {len(final_latents)}"
+            )
+        return RenoiseGenerationOutput(
+            frames_by_amplitude=self._decode_latents_in_chunks(
+                final_latents, decode_batch_size
+            ),
+            amplitudes=amplitudes,
+            branch_step=branch_step,
+            branch_sigma=branch_sigma,
+            noise_seed=noise_seed,
+        )
 
     @torch.no_grad()
     def generate_with_late_branches(

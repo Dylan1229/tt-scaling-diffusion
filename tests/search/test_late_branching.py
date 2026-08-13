@@ -231,6 +231,29 @@ def test_adapter_captures_candidate_posterior_means_after_fork() -> None:
     assert result.posterior_means_by_step[2].shape[0] == 3
 
 
+def test_adapter_expands_step2_renoise_amplitudes_and_embeddings_together() -> None:
+    adapter = Wan22Adapter(device="cpu")
+    fake_pipe = _FakeWanPipe()
+    adapter._pipe = fake_pipe
+
+    result = adapter.generate_with_renoise_branches(
+        prompt="test",
+        seed=0,
+        amplitudes=(0.0, 0.2, 0.4, 0.8),
+        branch_step=2,
+        noise_seed=123,
+        num_inference_steps=5,
+    )
+
+    assert fake_pipe.batch_sizes == [1, 4, 4, 4, 4]
+    assert fake_pipe.prompt_batch_sizes == fake_pipe.batch_sizes
+    assert result.amplitudes == (0.0, 0.2, 0.4, 0.8)
+    assert result.branch_step == 2
+    assert result.branch_sigma == pytest.approx(0.6)
+    assert result.noise_seed == 123
+    assert len(result.frames_by_amplitude) == 4
+
+
 def test_filter_work_by_explicit_prompt_seed_pairs_preserves_pair_order() -> None:
     p01 = {"id": "p01"}
     p02 = {"id": "p02"}
