@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from pathlib import Path
 
 import pytest
 
 from ttsd.runners.generate.step2_renoise_pilot import (
+    _amplitude_slug,
+    _row_from_artifacts,
     build_comparison_html,
     validate_config,
 )
@@ -25,6 +28,17 @@ def config() -> dict:
     }
 
 
+@pytest.fixture
+def step35_config(config: dict) -> dict:
+    changed = deepcopy(config)
+    changed["renoise"].update(
+        branch_step=35,
+        amplitudes=[0.0, 0.4, 0.6, 0.8, 1.0],
+        independent_seed=None,
+    )
+    return changed
+
+
 def test_build_comparison_html_contains_three_by_five_synchronized_grid() -> None:
     rows = []
     for prompt_id in ("p01", "p03", "p05"):
@@ -40,8 +54,9 @@ def test_build_comparison_html_contains_three_by_five_synchronized_grid() -> Non
         )
         rows.append({"prompt_id": prompt_id, "prompt_text": prompt_id, "videos": videos})
 
-    html = build_comparison_html({"rows": rows})
+    html = build_comparison_html({"branch_step": 2, "rows": rows})
 
+    assert "Step-2 RENOISE Visual Pilot" in html
     assert html.count("<video") == 15
     for label in ("alpha=0.0", "alpha=0.2", "alpha=0.4", "alpha=0.8", "independent seed=1"):
         assert label in html
@@ -54,7 +69,7 @@ def test_build_comparison_html_contains_three_by_five_synchronized_grid() -> Non
 @pytest.mark.parametrize(
     ("path", "value", "match"),
     [
-        (("renoise", "branch_step"), 3, "branch_step must be 2"),
+        (("renoise", "branch_step"), 3, "branch_step must be one of"),
         (("renoise", "amplitudes"), [0.0, 0.4, 0.8], "amplitudes must be"),
         (("renoise", "root_seed"), 2, "root_seed must be 0"),
         (("renoise", "independent_seed"), 3, "independent_seed must be 1"),
@@ -73,3 +88,36 @@ def test_validate_config_rejects_changes_to_fixed_pilot(
 
 def test_validate_config_accepts_exact_pilot(config: dict) -> None:
     validate_config(config)
+
+
+def test_validate_config_accepts_step35_pilot(step35_config: dict) -> None:
+    validate_config(step35_config)
+
+
+def test_step35_comparison_uses_five_amplitudes_without_independent_seed(
+    tmp_path: Path,
+) -> None:
+    amplitudes = [0.0, 0.4, 0.6, 0.8, 1.0]
+    for amplitude in amplitudes:
+        path = tmp_path / "p01" / _amplitude_slug(amplitude) / "video.mp4"
+        path.parent.mkdir(parents=True)
+        path.touch()
+
+    row = _row_from_artifacts(
+        tmp_path,
+        {"id": "p01", "text": "a person swimming in ocean"},
+        amplitudes,
+        independent_seed=None,
+    )
+    manifest = {"branch_step": 35, "rows": [row]}
+    comparison = build_comparison_html(manifest)
+
+    assert [video["label"] for video in row["videos"]] == [
+        "alpha=0.0",
+        "alpha=0.4",
+        "alpha=0.6",
+        "alpha=0.8",
+        "alpha=1.0",
+    ]
+    assert "Step-35 RENOISE Visual Pilot" in comparison
+    assert comparison.count("<video") == 5

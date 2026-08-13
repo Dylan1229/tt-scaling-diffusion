@@ -1,4 +1,4 @@
-"""Run the fixed Step-2 RENOISE visual pilot and build its comparison page."""
+"""Run a fixed RENOISE visual pilot and build its comparison page."""
 
 from __future__ import annotations
 
@@ -9,7 +9,10 @@ import importlib
 import json
 from pathlib import Path
 
-EXPECTED_AMPLITUDES = [0.0, 0.2, 0.4, 0.8]
+EXPECTED_PILOTS = {
+    2: ([0.0, 0.2, 0.4, 0.8], 1),
+    35: ([0.0, 0.4, 0.6, 0.8, 1.0], None),
+}
 EXPECTED_PROMPT_IDS = ["p01", "p03", "p05"]
 
 
@@ -19,14 +22,16 @@ def validate_config(cfg: dict) -> None:
     prompts = cfg["prompts"]
     if generation["num_inference_steps"] != 50:
         raise ValueError("num_inference_steps must be 50")
-    if renoise["branch_step"] != 2:
-        raise ValueError("branch_step must be 2")
-    if [float(value) for value in renoise["amplitudes"]] != EXPECTED_AMPLITUDES:
-        raise ValueError(f"amplitudes must be {EXPECTED_AMPLITUDES}")
+    branch_step = renoise["branch_step"]
+    if branch_step not in EXPECTED_PILOTS:
+        raise ValueError(f"branch_step must be one of {sorted(EXPECTED_PILOTS)}")
+    expected_amplitudes, expected_independent_seed = EXPECTED_PILOTS[branch_step]
+    if [float(value) for value in renoise["amplitudes"]] != expected_amplitudes:
+        raise ValueError(f"amplitudes must be {expected_amplitudes}")
     if renoise["root_seed"] != 0:
         raise ValueError("root_seed must be 0")
-    if renoise["independent_seed"] != 1:
-        raise ValueError("independent_seed must be 1")
+    if renoise["independent_seed"] != expected_independent_seed:
+        raise ValueError(f"independent_seed must be {expected_independent_seed}")
     if list(prompts["ids"]) != EXPECTED_PROMPT_IDS:
         raise ValueError(f"prompt ids must be {EXPECTED_PROMPT_IDS}")
 
@@ -36,6 +41,7 @@ def _amplitude_slug(amplitude: float) -> str:
 
 
 def build_comparison_html(manifest: dict) -> str:
+    branch_step = manifest["branch_step"]
     rows = manifest["rows"]
     column_labels = [video["label"] for video in rows[0]["videos"]] if rows else []
     cells = ['<div class="corner">Prompt</div>']
@@ -59,7 +65,7 @@ def build_comparison_html(manifest: dict) -> str:
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Step-2 RENOISE Visual Pilot</title>
+<title>Step-{branch_step} RENOISE Visual Pilot</title>
 <style>
 :root {{ color-scheme: dark; font-family: ui-sans-serif, system-ui, sans-serif; }}
 body {{ margin: 0; padding: 24px; background: #111; color: #eee; }}
@@ -75,7 +81,7 @@ video {{ display: block; width: 100%; aspect-ratio: 832 / 480; object-fit: conta
 </style>
 </head>
 <body>
-<h1>Step-2 RENOISE Visual Pilot</h1>
+<h1>Step-{branch_step} RENOISE Visual Pilot</h1>
 <p>Root seed 0 · UniPC 50 steps · same fresh-noise direction across amplitudes</p>
 <button type="button" onclick="syncVideos()">Restart all videos together</button>
 <div class="grid">
@@ -109,7 +115,12 @@ def _write_meta(directory: Path, meta: dict) -> None:
     (directory / "meta.json").write_text(json.dumps(meta, indent=2) + "\n")
 
 
-def _row_from_artifacts(run_root: Path, prompt: dict, amplitudes: list[float]) -> dict:
+def _row_from_artifacts(
+    run_root: Path,
+    prompt: dict,
+    amplitudes: list[float],
+    independent_seed: int | None,
+) -> dict:
     videos = [
         {
             "label": f"alpha={amplitude:.1f}",
@@ -119,14 +130,19 @@ def _row_from_artifacts(run_root: Path, prompt: dict, amplitudes: list[float]) -
         }
         for amplitude in amplitudes
     ]
-    videos.append(
-        {
-            "label": "independent seed=1",
-            "path": str(
-                (Path(prompt["id"]) / "independent_seed_1" / "video.mp4").as_posix()
-            ),
-        }
-    )
+    if independent_seed is not None:
+        videos.append(
+            {
+                "label": f"independent seed={independent_seed}",
+                "path": str(
+                    (
+                        Path(prompt["id"])
+                        / f"independent_seed_{independent_seed}"
+                        / "video.mp4"
+                    ).as_posix()
+                ),
+            }
+        )
     for video in videos:
         if not (run_root / video["path"]).is_file():
             raise RuntimeError(f"missing comparison video: {run_root / video['path']}")
@@ -195,6 +211,10 @@ def main(argv: list[str] | None = None) -> None:
         snapshot.write_text(yaml.safe_dump(cfg, sort_keys=False))
 
     height, width = gen_cfg["resolution"]
+    branch_step = renoise_cfg["branch_step"]
+    experiment = f"step{branch_step}_renoise_visual_pilot"
+    log_prefix = f"[step{branch_step}_renoise]"
+    independent_seed = renoise_cfg["independent_seed"]
     amplitudes = [float(value) for value in renoise_cfg["amplitudes"]]
     common_generation = {
         "num_frames": gen_cfg["num_frames"],
@@ -203,14 +223,14 @@ def main(argv: list[str] | None = None) -> None:
         "num_inference_steps": gen_cfg["num_inference_steps"],
         "guidance_scale": gen_cfg["guidance_scale"],
     }
-    print(f"[step2_renoise] run_root={run_root}")
+    print(f"{log_prefix} run_root={run_root}")
 
     for prompt in prompts:
         branch_dirs = [run_root / prompt["id"] / _amplitude_slug(a) for a in amplitudes]
         if all(_complete(directory) for directory in branch_dirs):
-            print(f"[step2_renoise] SKIP {prompt['id']} amplitudes (complete)")
+            print(f"{log_prefix} SKIP {prompt['id']} amplitudes (complete)")
         else:
-            print(f"[step2_renoise] GENERATE {prompt['id']} amplitudes")
+            print(f"{log_prefix} GENERATE {prompt['id']} amplitudes")
             result = adapter.generate_with_renoise_branches(
                 prompt=prompt["text"],
                 seed=renoise_cfg["root_seed"],
@@ -227,7 +247,7 @@ def main(argv: list[str] | None = None) -> None:
                 _write_meta(
                     directory,
                     {
-                        "experiment": "step2_renoise_visual_pilot",
+                        "experiment": experiment,
                         "kind": "renoise",
                         "prompt_id": prompt["id"],
                         "prompt_text": prompt["text"],
@@ -243,36 +263,40 @@ def main(argv: list[str] | None = None) -> None:
                     },
                 )
 
-        independent_dir = run_root / prompt["id"] / "independent_seed_1"
-        if _complete(independent_dir):
-            print(f"[step2_renoise] SKIP {prompt['id']} independent seed (complete)")
-        else:
-            print(f"[step2_renoise] GENERATE {prompt['id']} independent seed=1")
-            independent = adapter.generate(
-                prompt=prompt["text"],
-                seed=renoise_cfg["independent_seed"],
-                **common_generation,
-            )
-            independent_dir.mkdir(parents=True, exist_ok=True)
-            _save_video(
-                independent.frames,
-                independent_dir / "video.mp4",
-                fps=out_cfg["fps"],
-            )
-            _write_meta(
-                independent_dir,
-                {
-                    "experiment": "step2_renoise_visual_pilot",
-                    "kind": "independent_seed",
-                    "prompt_id": prompt["id"],
-                    "prompt_text": prompt["text"],
-                    "axis": prompt.get("axis", ""),
-                    "seed": renoise_cfg["independent_seed"],
-                    "model": model_cfg["name"],
-                    "scheduler": "unipc",
-                    **gen_cfg,
-                },
-            )
+        if independent_seed is not None:
+            independent_dir = run_root / prompt["id"] / f"independent_seed_{independent_seed}"
+            if _complete(independent_dir):
+                print(f"{log_prefix} SKIP {prompt['id']} independent seed (complete)")
+            else:
+                print(
+                    f"{log_prefix} GENERATE {prompt['id']} "
+                    f"independent seed={independent_seed}"
+                )
+                independent = adapter.generate(
+                    prompt=prompt["text"],
+                    seed=independent_seed,
+                    **common_generation,
+                )
+                independent_dir.mkdir(parents=True, exist_ok=True)
+                _save_video(
+                    independent.frames,
+                    independent_dir / "video.mp4",
+                    fps=out_cfg["fps"],
+                )
+                _write_meta(
+                    independent_dir,
+                    {
+                        "experiment": experiment,
+                        "kind": "independent_seed",
+                        "prompt_id": prompt["id"],
+                        "prompt_text": prompt["text"],
+                        "axis": prompt.get("axis", ""),
+                        "seed": independent_seed,
+                        "model": model_cfg["name"],
+                        "scheduler": "unipc",
+                        **gen_cfg,
+                    },
+                )
 
     completed_prompts = [
         prompt
@@ -282,20 +306,24 @@ def main(argv: list[str] | None = None) -> None:
             _complete(run_root / prompt_id / _amplitude_slug(amplitude))
             for amplitude in amplitudes
         )
-        and _complete(run_root / prompt_id / "independent_seed_1")
+        and (
+            independent_seed is None
+            or _complete(run_root / prompt_id / f"independent_seed_{independent_seed}")
+        )
     ]
     manifest = {
-        "experiment": "step2_renoise_visual_pilot",
+        "experiment": experiment,
+        "branch_step": branch_step,
         "run_id": run_id,
         "rows": [
-            _row_from_artifacts(run_root, prompt, amplitudes)
+            _row_from_artifacts(run_root, prompt, amplitudes, independent_seed)
             for prompt in completed_prompts
         ],
     }
     (run_root / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     (run_root / "comparison.html").write_text(build_comparison_html(manifest))
-    print(f"[step2_renoise] complete_rows={len(manifest['rows'])}")
-    print(f"[step2_renoise] comparison={run_root / 'comparison.html'}")
+    print(f"{log_prefix} complete_rows={len(manifest['rows'])}")
+    print(f"{log_prefix} comparison={run_root / 'comparison.html'}")
 
 
 if __name__ == "__main__":
