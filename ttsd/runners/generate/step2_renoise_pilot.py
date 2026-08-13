@@ -45,7 +45,7 @@ def build_comparison_html(manifest: dict) -> str:
     rows = manifest["rows"]
     column_labels = [video["label"] for video in rows[0]["videos"]] if rows else []
     column_count = len(column_labels)
-    minimum_width = 180 + column_count * 270
+    minimum_width = max(1550, 180 + column_count * 270)
     cells = ['<div class="corner">Prompt</div>']
     cells.extend(f'<div class="header">{html.escape(label)}</div>' for label in column_labels)
     for row in rows:

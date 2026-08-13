@@ -125,3 +125,4 @@ def test_step35_comparison_uses_five_amplitudes_without_independent_seed(
     assert "Step-35 RENOISE Visual Pilot" in comparison
     assert comparison.count("<video") == 5
     assert "repeat(5, minmax(260px, 1fr))" in comparison
+    assert "min-width: 1550px" in comparison
