@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 
 EXPECTED_PILOTS = {
-    2: ([0.0, 0.2, 0.4, 0.8], 1),
+    2: ([0.0, 0.2, 0.4, 0.6, 0.8, 1.0], None),
     35: ([0.0, 0.4, 0.6, 0.8, 1.0], None),
 }
 EXPECTED_PROMPT_IDS = ["p01", "p03", "p05"]
@@ -44,6 +44,8 @@ def build_comparison_html(manifest: dict) -> str:
     branch_step = manifest["branch_step"]
     rows = manifest["rows"]
     column_labels = [video["label"] for video in rows[0]["videos"]] if rows else []
+    column_count = len(column_labels)
+    minimum_width = 180 + column_count * 270
     cells = ['<div class="corner">Prompt</div>']
     cells.extend(f'<div class="header">{html.escape(label)}</div>' for label in column_labels)
     for row in rows:
@@ -72,7 +74,7 @@ body {{ margin: 0; padding: 24px; background: #111; color: #eee; }}
 h1 {{ margin: 0 0 8px; font-size: 24px; }}
 p {{ margin: 0 0 20px; color: #aaa; }}
 button {{ margin-bottom: 16px; padding: 8px 12px; cursor: pointer; }}
-.grid {{ display: grid; grid-template-columns: 180px repeat(5, minmax(260px, 1fr)); gap: 10px; min-width: 1550px; align-items: center; }}
+.grid {{ display: grid; grid-template-columns: 180px repeat({column_count}, minmax(260px, 1fr)); gap: 10px; min-width: {minimum_width}px; align-items: center; }}
 .header, .corner {{ position: sticky; top: 0; z-index: 2; padding: 10px; background: #202020; text-align: center; font-weight: 700; }}
 .prompt {{ align-self: stretch; display: flex; flex-direction: column; justify-content: center; gap: 8px; padding: 12px; background: #1b1b1b; }}
 .prompt span {{ color: #bbb; line-height: 1.35; }}

@@ -15,9 +15,9 @@ generation:
 
 renoise:
   branch_step: 2
-  amplitudes: [0.0, 0.2, 0.4, 0.8]
+  amplitudes: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
   root_seed: 0
-  independent_seed: 1
+  independent_seed: null
   noise_seed: 10000000
 
 prompts:

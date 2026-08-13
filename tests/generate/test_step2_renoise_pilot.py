@@ -19,9 +19,9 @@ def config() -> dict:
         "generation": {"num_inference_steps": 50},
         "renoise": {
             "branch_step": 2,
-            "amplitudes": [0.0, 0.2, 0.4, 0.8],
+            "amplitudes": [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             "root_seed": 0,
-            "independent_seed": 1,
+            "independent_seed": None,
             "noise_seed": 10_000_000,
         },
         "prompts": {"ids": ["p01", "p03", "p05"]},
@@ -39,29 +39,32 @@ def step35_config(config: dict) -> dict:
     return changed
 
 
-def test_build_comparison_html_contains_three_by_five_synchronized_grid() -> None:
+def test_build_comparison_html_contains_three_by_six_synchronized_grid() -> None:
     rows = []
     for prompt_id in ("p01", "p03", "p05"):
         videos = [
             {"label": f"alpha={alpha:.1f}", "path": f"{prompt_id}/alpha_{alpha}/video.mp4"}
-            for alpha in (0.0, 0.2, 0.4, 0.8)
+            for alpha in (0.0, 0.2, 0.4, 0.6, 0.8, 1.0)
         ]
-        videos.append(
-            {
-                "label": "independent seed=1",
-                "path": f"{prompt_id}/independent_seed_1/video.mp4",
-            }
-        )
         rows.append({"prompt_id": prompt_id, "prompt_text": prompt_id, "videos": videos})
 
     html = build_comparison_html({"branch_step": 2, "rows": rows})
 
     assert "Step-2 RENOISE Visual Pilot" in html
-    assert html.count("<video") == 15
-    for label in ("alpha=0.0", "alpha=0.2", "alpha=0.4", "alpha=0.8", "independent seed=1"):
+    assert html.count("<video") == 18
+    assert "repeat(6, minmax(260px, 1fr))" in html
+    assert "independent seed" not in html
+    for label in (
+        "alpha=0.0",
+        "alpha=0.2",
+        "alpha=0.4",
+        "alpha=0.6",
+        "alpha=0.8",
+        "alpha=1.0",
+    ):
         assert label in html
     for attribute in ("autoplay", "muted", "loop", "controls"):
-        assert html.count(attribute) >= 15
+        assert html.count(attribute) >= 18
     assert "currentTime = 0" in html
     assert ".play()" in html
 
@@ -72,7 +75,7 @@ def test_build_comparison_html_contains_three_by_five_synchronized_grid() -> Non
         (("renoise", "branch_step"), 3, "branch_step must be one of"),
         (("renoise", "amplitudes"), [0.0, 0.4, 0.8], "amplitudes must be"),
         (("renoise", "root_seed"), 2, "root_seed must be 0"),
-        (("renoise", "independent_seed"), 3, "independent_seed must be 1"),
+        (("renoise", "independent_seed"), 3, "independent_seed must be None"),
         (("prompts", "ids"), ["p01"], "prompt ids must be"),
     ],
 )
@@ -121,3 +124,4 @@ def test_step35_comparison_uses_five_amplitudes_without_independent_seed(
     ]
     assert "Step-35 RENOISE Visual Pilot" in comparison
     assert comparison.count("<video") == 5
+    assert "repeat(5, minmax(260px, 1fr))" in comparison
