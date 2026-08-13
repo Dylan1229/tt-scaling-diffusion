@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 
 import torch
@@ -73,6 +74,51 @@ def sigma_after_step(scheduler, step_index: int) -> float:
             "scheduler must expose a sigmas sequence with one terminal entry"
         )
     return float(sigmas[sigma_index].detach().to("cpu"))
+
+
+def renoise_latents(
+    latents: torch.Tensor,
+    *,
+    posterior: torch.Tensor,
+    sigma: float,
+    amplitudes: Iterable[float],
+    noise_seed: int,
+) -> torch.Tensor:
+    """Rotate a post-step latent's implied noise toward one fresh direction."""
+
+    if latents.shape != posterior.shape:
+        raise ValueError("latents and posterior must have the same shape")
+    if not sigma > 0:
+        raise ValueError(f"sigma must be positive, got {sigma}")
+    amplitudes = tuple(float(amplitude) for amplitude in amplitudes)
+    if not amplitudes:
+        raise ValueError("at least one amplitude is required")
+    if any(not 0.0 <= amplitude <= 1.0 for amplitude in amplitudes):
+        raise ValueError("amplitudes must be in [0, 1]")
+
+    implied_noise = (latents - (1.0 - sigma) * posterior) / sigma
+    generator = torch.Generator(device=latents.device).manual_seed(noise_seed)
+    fresh_noise = torch.randn(
+        latents.shape,
+        generator=generator,
+        device=latents.device,
+        dtype=latents.dtype,
+    )
+    signal = (1.0 - sigma) * posterior
+    return torch.cat(
+        [
+            latents
+            if amplitude == 0.0
+            else signal
+            + sigma
+            * (
+                (1.0 - amplitude**2) ** 0.5 * implied_noise
+                + amplitude * fresh_noise
+            )
+            for amplitude in amplitudes
+        ],
+        dim=0,
+    )
 
 
 def fork_latents(

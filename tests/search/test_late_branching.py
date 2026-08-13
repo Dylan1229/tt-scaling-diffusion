@@ -11,6 +11,7 @@ from ttsd.search.late_branching import (
     LateBranchConfig,
     denoising_step_equivalents,
     fork_latents,
+    renoise_latents,
     sigma_after_step,
 )
 
@@ -80,6 +81,72 @@ def test_sigma_and_compute_accounting() -> None:
     scheduler = SimpleNamespace(sigmas=torch.tensor([1.0, 0.8, 0.5, 0.0]))
     assert sigma_after_step(scheduler, 1) == pytest.approx(0.5)
     assert denoising_step_equivalents(50, branch_step=35, total_branches=5) == 110
+
+
+def test_renoise_reconstructs_control_and_reuses_one_noise_direction() -> None:
+    posterior = torch.full((1, 1, 2, 2), 0.25)
+    implied_noise = torch.tensor([[[[0.2, -0.4], [0.6, -0.8]]]])
+    sigma = 0.8
+    latents = (1.0 - sigma) * posterior + sigma * implied_noise
+    amplitudes = (0.0, 0.2, 0.4, 0.8)
+
+    branches = renoise_latents(
+        latents,
+        posterior=posterior,
+        sigma=sigma,
+        amplitudes=amplitudes,
+        noise_seed=123,
+    )
+    repeated = renoise_latents(
+        latents,
+        posterior=posterior,
+        sigma=sigma,
+        amplitudes=amplitudes,
+        noise_seed=123,
+    )
+
+    assert branches.shape == (4, 1, 2, 2)
+    assert torch.allclose(branches[0], latents[0], atol=1e-6, rtol=1e-6)
+    assert torch.equal(branches, repeated)
+
+    recovered = (branches - (1.0 - sigma) * posterior) / sigma
+    fresh_at_02 = (recovered[1] - (1.0 - 0.2**2) ** 0.5 * implied_noise[0]) / 0.2
+    fresh_at_04 = (recovered[2] - (1.0 - 0.4**2) ** 0.5 * implied_noise[0]) / 0.4
+    assert torch.allclose(fresh_at_02, fresh_at_04, atol=1e-6, rtol=1e-6)
+
+
+@pytest.mark.parametrize(
+    ("sigma", "amplitudes", "match"),
+    [
+        (0.0, (0.2,), "sigma must be positive"),
+        (0.8, (), "at least one amplitude"),
+        (0.8, (-0.1,), "amplitudes must be in"),
+        (0.8, (1.1,), "amplitudes must be in"),
+    ],
+)
+def test_renoise_rejects_invalid_parameters(
+    sigma: float, amplitudes: tuple[float, ...], match: str
+) -> None:
+    latents = torch.zeros((1, 1, 1, 1))
+    with pytest.raises(ValueError, match=match):
+        renoise_latents(
+            latents,
+            posterior=latents,
+            sigma=sigma,
+            amplitudes=amplitudes,
+            noise_seed=0,
+        )
+
+
+def test_renoise_requires_matching_posterior_shape() -> None:
+    with pytest.raises(ValueError, match="same shape"):
+        renoise_latents(
+            torch.zeros((1, 1, 1, 1)),
+            posterior=torch.zeros((1, 1, 1, 2)),
+            sigma=0.8,
+            amplitudes=(0.2,),
+            noise_seed=0,
+        )
 
 
 class _FakeScheduler:
