@@ -63,6 +63,139 @@ def test_contact_sheet_contains_every_frame(tmp_path) -> None:
         assert sheet.size == (18, 8)
 
 
+def _write_complete_preparation_bundle(
+    runner,
+    output_root,
+    *,
+    manifest_overrides: dict[str, object] | None = None,
+    parent_meta_overrides: dict[str, object] | None = None,
+) -> None:
+    parent_noise = torch.zeros((1,), dtype=torch.float32)
+    runner._atomic_save_tensor(output_root / "parent_noise.pt", parent_noise)
+    manifest = runner._prepare_neighbors(output_root, parent_noise)
+    if manifest_overrides:
+        manifest.update(manifest_overrides)
+        runner._atomic_write_json(output_root / "manifest.json", manifest)
+
+    control_dir = output_root / "parent_control"
+    runner._atomic_write_bytes(control_dir / "video.mp4", b"video")
+    runner._atomic_write_bytes(control_dir / "all_frames.jpg", b"sheet")
+    parent_meta = {
+        "kind": "parent_control",
+        "seed": runner.PARENT_SEED,
+        "prompt": runner.PROMPT,
+        "input_path": str(runner.INPUT),
+        "input_sha256": runner.INPUT_SHA256,
+        "model_path": str(runner.MODEL),
+        "scheduler_class": "UniPCMultistepScheduler",
+        "height": runner.HEIGHT,
+        "width": runner.WIDTH,
+        "num_frames": runner.NUM_FRAMES,
+        "num_inference_steps": runner.STEPS,
+        "guidance_scale": runner.GUIDANCE_SCALE,
+        "fps": runner.FPS,
+        "elapsed_seconds": 0.0,
+        "peak_gpu_memory_mb": 0.0,
+    }
+    if parent_meta_overrides:
+        parent_meta.update(parent_meta_overrides)
+    runner._atomic_write_json(control_dir / "meta.json", parent_meta)
+    runner._atomic_touch(control_dir / "DONE")
+    runner._atomic_touch(runner._prepare_done_path(output_root))
+
+
+@pytest.mark.parametrize(
+    ("manifest_overrides", "parent_meta_overrides", "expected"),
+    [
+        ({"prompt": "stale prompt"}, None, r"manifest\.prompt"),
+        (None, {"seed": -1}, r"parent_control\.seed"),
+    ],
+)
+def test_complete_bundle_rejects_stale_fixed_settings(
+    tmp_path,
+    monkeypatch,
+    manifest_overrides,
+    parent_meta_overrides,
+    expected,
+) -> None:
+    runner = load_runner()
+    _write_complete_preparation_bundle(
+        runner,
+        tmp_path,
+        manifest_overrides=manifest_overrides,
+        parent_meta_overrides=parent_meta_overrides,
+    )
+    monkeypatch.setattr(runner, "_load_image", lambda path: pytest.fail("stale bundle should not rebuild"))
+    monkeypatch.setattr(runner, "load_pipeline", lambda: pytest.fail("stale bundle should not rebuild"))
+
+    with pytest.raises(RuntimeError, match=expected):
+        runner._ensure_prepared(tmp_path, auto_prepare=True)
+
+
+def test_auto_prepare_recovers_from_interrupted_preparation(tmp_path, monkeypatch) -> None:
+    runner = load_runner()
+    runner._atomic_save_tensor(tmp_path / "parent_noise.pt", torch.zeros((1,), dtype=torch.float32))
+    calls: list[str] = []
+    new_parent_noise = torch.ones((1,), dtype=torch.float32)
+    original_prepare_neighbors = runner._prepare_neighbors
+
+    def fake_load_image(path):
+        calls.append("load_image")
+        return Image.new("RGB", (4, 4))
+
+    def fake_load_pipeline():
+        calls.append("load_pipeline")
+        return object()
+
+    def fake_capture_parent_noise(pipe, image, output_root):
+        calls.append("capture_parent_noise")
+        runner._atomic_save_tensor(output_root / "parent_noise.pt", new_parent_noise)
+        control_dir = output_root / "parent_control"
+        runner._atomic_write_bytes(control_dir / "video.mp4", b"video")
+        runner._atomic_write_bytes(control_dir / "all_frames.jpg", b"sheet")
+        runner._atomic_write_json(
+            control_dir / "meta.json",
+            {
+                "kind": "parent_control",
+                "seed": runner.PARENT_SEED,
+                "prompt": runner.PROMPT,
+                "input_path": str(runner.INPUT),
+                "input_sha256": runner.INPUT_SHA256,
+                "model_path": str(runner.MODEL),
+                "scheduler_class": "UniPCMultistepScheduler",
+                "height": runner.HEIGHT,
+                "width": runner.WIDTH,
+                "num_frames": runner.NUM_FRAMES,
+                "num_inference_steps": runner.STEPS,
+                "guidance_scale": runner.GUIDANCE_SCALE,
+                "fps": runner.FPS,
+                "elapsed_seconds": 0.0,
+                "peak_gpu_memory_mb": 0.0,
+            },
+        )
+        runner._atomic_touch(control_dir / "DONE")
+        return new_parent_noise, np.zeros((1, 1, 1, 3), dtype=np.uint8), {"fps": runner.FPS}
+
+    def wrapped_prepare_neighbors(output_root, parent_noise):
+        calls.append("prepare_neighbors")
+        assert not runner._prepare_done_path(output_root).exists()
+        return original_prepare_neighbors(output_root, parent_noise)
+
+    monkeypatch.setattr(runner, "_load_image", fake_load_image)
+    monkeypatch.setattr(runner, "load_pipeline", fake_load_pipeline)
+    monkeypatch.setattr(runner, "_capture_parent_noise", fake_capture_parent_noise)
+    monkeypatch.setattr(runner, "_prepare_neighbors", wrapped_prepare_neighbors)
+
+    manifest = runner._ensure_prepared(tmp_path, auto_prepare=True)
+
+    assert calls == ["load_image", "load_pipeline", "capture_parent_noise", "prepare_neighbors"]
+    torch.testing.assert_close(torch.load(tmp_path / "parent_noise.pt"), new_parent_noise)
+    assert (tmp_path / "manifest.json").exists()
+    assert (tmp_path / "parent_control" / "DONE").exists()
+    assert runner._prepare_done_path(tmp_path).exists()
+    assert len(manifest["neighbors"]) == len(runner.neighbor_specs())
+
+
 def test_prepare_requires_complete_bundle_and_done_marker(tmp_path) -> None:
     runner = load_runner()
     noise_path = tmp_path / "noise" / "n00_a002.pt"

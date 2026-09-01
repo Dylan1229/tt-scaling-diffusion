@@ -32,6 +32,7 @@ NEIGHBORS_PER_ALPHA = 8
 PARENT_SEED = 0
 HEIGHT, WIDTH, NUM_FRAMES, STEPS = 480, 832, 81, 50
 GUIDANCE_SCALE, FPS = 5.0, 24
+SCHEDULER_CLASS = "UniPCMultistepScheduler"
 
 
 def neighbor_specs() -> list[dict[str, int | float | str]]:
@@ -227,8 +228,8 @@ def load_pipeline():
     pipe = WanImageToVideoPipeline.from_pretrained(
         MODEL, vae=vae, torch_dtype=torch.bfloat16, local_files_only=True
     ).to("cuda")
-    if type(pipe.scheduler).__name__ != "UniPCMultistepScheduler":
-        raise RuntimeError(f"expected UniPCMultistepScheduler, got {type(pipe.scheduler).__name__}")
+    if type(pipe.scheduler).__name__ != SCHEDULER_CLASS:
+        raise RuntimeError(f"expected {SCHEDULER_CLASS}, got {type(pipe.scheduler).__name__}")
     return pipe
 
 
@@ -278,6 +279,31 @@ def _prepare_done_path(output_root: Path) -> Path:
     return output_root / "prepare" / "DONE"
 
 
+def _expected_prepare_fields() -> dict[str, object]:
+    return {
+        "prompt": PROMPT,
+        "input_path": str(INPUT),
+        "input_sha256": INPUT_SHA256,
+        "model_path": str(MODEL),
+        "scheduler_class": SCHEDULER_CLASS,
+        "height": HEIGHT,
+        "width": WIDTH,
+        "num_frames": NUM_FRAMES,
+        "num_inference_steps": STEPS,
+        "guidance_scale": GUIDANCE_SCALE,
+        "fps": FPS,
+    }
+
+
+def _require_expected_fields(source: str, payload: dict[str, object], expected_fields: dict[str, object]) -> None:
+    for key, expected in expected_fields.items():
+        if key not in payload:
+            raise RuntimeError(f"invalid preparation bundle: missing {source}.{key}")
+        actual = payload[key]
+        if actual != expected:
+            raise RuntimeError(f"stale preparation bundle: {source}.{key}={actual!r} != {expected!r}")
+
+
 def _capture_parent_noise(pipe, image: Image.Image, output_root: Path) -> tuple[torch.Tensor, np.ndarray, dict[str, object]]:
     captured: dict[str, torch.Tensor] = {}
     original = pipe.prepare_latents
@@ -314,7 +340,7 @@ def _capture_parent_noise(pipe, image: Image.Image, output_root: Path) -> tuple[
         "input_path": str(INPUT),
         "input_sha256": INPUT_SHA256,
         "model_path": str(MODEL),
-        "scheduler_class": type(pipe.scheduler).__name__,
+        "scheduler_class": SCHEDULER_CLASS,
         "diffusers_version": metadata.version("diffusers"),
         "torch_version": torch.__version__,
         "height": HEIGHT,
@@ -346,7 +372,7 @@ def _prepare_neighbors(output_root: Path, parent_noise: torch.Tensor) -> dict[st
         "input_path": str(INPUT),
         "input_sha256": INPUT_SHA256,
         "model_path": str(MODEL),
-        "scheduler_class": "UniPCMultistepScheduler",
+        "scheduler_class": SCHEDULER_CLASS,
         "diffusers_version": metadata.version("diffusers"),
         "torch_version": torch.__version__,
         "height": HEIGHT,
@@ -379,6 +405,13 @@ def _validate_preparation(output_root: Path) -> dict[str, object]:
     if missing:
         raise RuntimeError(f"incomplete preparation bundle: {missing}")
     manifest = json.loads(manifest_path.read_text())
+    _require_expected_fields("manifest", manifest, _expected_prepare_fields())
+    parent_control_meta = json.loads((control_dir / "meta.json").read_text())
+    _require_expected_fields(
+        "parent_control",
+        parent_control_meta,
+        {**_expected_prepare_fields(), "kind": "parent_control", "seed": PARENT_SEED},
+    )
     neighbors = manifest.get("neighbors")
     if not isinstance(neighbors, list) or len(neighbors) != len(neighbor_specs()):
         raise RuntimeError("incomplete preparation manifest")
@@ -406,8 +439,6 @@ def _validate_preparation(output_root: Path) -> dict[str, object]:
 def _ensure_prepared(output_root: Path, auto_prepare: bool) -> dict[str, object]:
     if _prepare_done_path(output_root).exists():
         return _validate_preparation(output_root)
-    if (output_root / "parent_noise.pt").exists():
-        raise RuntimeError("preparation must finish before generation")
     if not auto_prepare:
         raise RuntimeError("preparation must finish before generation")
     image = _load_image(INPUT)
