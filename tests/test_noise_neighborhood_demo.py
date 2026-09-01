@@ -4,6 +4,7 @@ import importlib
 import math
 
 import numpy as np
+import pytest
 import torch
 from PIL import Image
 
@@ -60,3 +61,60 @@ def test_contact_sheet_contains_every_frame(tmp_path) -> None:
 
     with Image.open(output) as sheet:
         assert sheet.size == (18, 8)
+
+
+def test_prepare_requires_complete_bundle_and_done_marker(tmp_path) -> None:
+    runner = load_runner()
+    noise_path = tmp_path / "noise" / "n00_a002.pt"
+    runner._atomic_save_tensor(tmp_path / "parent_noise.pt", torch.zeros((1,), dtype=torch.float32))
+    runner._atomic_save_tensor(noise_path, torch.zeros((1,), dtype=torch.float32))
+    runner._atomic_write_json(
+        tmp_path / "manifest.json",
+        {
+            "neighbors": [
+                {
+                    "index": 0,
+                    "alpha": 0.02,
+                    "perturb_seed": 10_000,
+                    "sample_id": "n00_a002",
+                    "noise_path": str(noise_path.relative_to(tmp_path)),
+                    "metrics": {"rms_distance": 1.0, "cosine_similarity": 0.0, "norm_ratio": 1.0},
+                }
+            ]
+        },
+    )
+
+    with pytest.raises(RuntimeError):
+        runner._ensure_prepared(tmp_path, auto_prepare=False)
+
+
+def test_metadata_records_fixed_fps_everywhere(tmp_path, monkeypatch) -> None:
+    runner = load_runner()
+
+    class FakePipe:
+        def __init__(self) -> None:
+            self.scheduler = type("Scheduler", (), {})()
+
+        def prepare_latents(self, *args, **kwargs):
+            return (torch.zeros((1,), dtype=torch.float32),)
+
+    frames = [np.full((4, 4, 3), 0.5, dtype=np.float32) for _ in range(3)]
+
+    def fake_run_pipeline(pipe, image, *, seed=None, latents=None):
+        if latents is None:
+            pipe.prepare_latents()
+        return frames
+
+    monkeypatch.setattr(runner, "run_pipeline", fake_run_pipeline)
+
+    pipe = FakePipe()
+    parent_latents, _, parent_meta = runner._capture_parent_noise(pipe, Image.new("RGB", (4, 4)), tmp_path)
+    assert parent_meta["fps"] == runner.FPS
+
+    manifest = runner._prepare_neighbors(tmp_path, parent_latents)
+    assert manifest["fps"] == runner.FPS
+
+    entry = manifest["neighbors"][0]
+    monkeypatch.setattr(runner, "_pipe_device", lambda pipe: torch.device("cpu"))
+    sample_meta = runner._generate_sample(pipe, Image.new("RGB", (4, 4)), tmp_path, entry)
+    assert sample_meta["fps"] == runner.FPS

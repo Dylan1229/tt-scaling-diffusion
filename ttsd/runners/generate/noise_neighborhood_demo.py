@@ -274,6 +274,10 @@ def _complete_sample_dir(sample_dir: Path) -> bool:
     return all((sample_dir / name).exists() for name in ("video.mp4", "all_frames.jpg", "meta.json", "DONE"))
 
 
+def _prepare_done_path(output_root: Path) -> Path:
+    return output_root / "prepare" / "DONE"
+
+
 def _capture_parent_noise(pipe, image: Image.Image, output_root: Path) -> tuple[torch.Tensor, np.ndarray, dict[str, object]]:
     captured: dict[str, torch.Tensor] = {}
     original = pipe.prepare_latents
@@ -318,6 +322,7 @@ def _capture_parent_noise(pipe, image: Image.Image, output_root: Path) -> tuple[
         "num_frames": NUM_FRAMES,
         "num_inference_steps": STEPS,
         "guidance_scale": GUIDANCE_SCALE,
+        "fps": FPS,
         "elapsed_seconds": elapsed,
         "peak_gpu_memory_mb": float(torch.cuda.max_memory_allocated() / (1024 * 1024)) if torch.cuda.is_available() else 0.0,
     }
@@ -349,6 +354,7 @@ def _prepare_neighbors(output_root: Path, parent_noise: torch.Tensor) -> dict[st
         "num_frames": NUM_FRAMES,
         "num_inference_steps": STEPS,
         "guidance_scale": GUIDANCE_SCALE,
+        "fps": FPS,
         "parent_noise_path": "parent_noise.pt",
         "neighbors": neighbors,
     }
@@ -356,10 +362,22 @@ def _prepare_neighbors(output_root: Path, parent_noise: torch.Tensor) -> dict[st
     return manifest
 
 
-def _validate_manifest(output_root: Path) -> dict[str, object]:
+def _validate_preparation(output_root: Path) -> dict[str, object]:
     manifest_path = output_root / "manifest.json"
-    if not manifest_path.exists():
-        raise RuntimeError("missing preparation manifest")
+    done_path = _prepare_done_path(output_root)
+    control_dir = output_root / "parent_control"
+    required = [
+        output_root / "parent_noise.pt",
+        manifest_path,
+        control_dir / "video.mp4",
+        control_dir / "all_frames.jpg",
+        control_dir / "meta.json",
+        control_dir / "DONE",
+        done_path,
+    ]
+    missing = [str(path.relative_to(output_root)) for path in required if not path.exists()]
+    if missing:
+        raise RuntimeError(f"incomplete preparation bundle: {missing}")
     manifest = json.loads(manifest_path.read_text())
     neighbors = manifest.get("neighbors")
     if not isinstance(neighbors, list) or len(neighbors) != len(neighbor_specs()):
@@ -380,19 +398,24 @@ def _validate_manifest(output_root: Path) -> dict[str, object]:
             raise RuntimeError(f"missing noise tensor for {sample_id}")
     if len(seen) != len(expected):
         raise RuntimeError("incomplete preparation manifest")
+    if int(manifest.get("fps", FPS)) != FPS:
+        raise RuntimeError("incomplete preparation manifest: fps mismatch")
     return manifest
 
 
 def _ensure_prepared(output_root: Path, auto_prepare: bool) -> dict[str, object]:
-    parent_noise_path = output_root / "parent_noise.pt"
-    if parent_noise_path.exists():
-        return _validate_manifest(output_root)
+    if _prepare_done_path(output_root).exists():
+        return _validate_preparation(output_root)
+    if (output_root / "parent_noise.pt").exists():
+        raise RuntimeError("preparation must finish before generation")
     if not auto_prepare:
         raise RuntimeError("preparation must finish before generation")
     image = _load_image(INPUT)
     pipe = load_pipeline()
     parent_noise, _, _ = _capture_parent_noise(pipe, image, output_root)
-    return _prepare_neighbors(output_root, parent_noise)
+    manifest = _prepare_neighbors(output_root, parent_noise)
+    _atomic_touch(_prepare_done_path(output_root))
+    return manifest
 
 
 def _selected_specs(manifest: dict[str, object], shard_index: int, num_shards: int, indices: list[int] | None) -> list[dict[str, object]]:
@@ -451,6 +474,7 @@ def _generate_sample(pipe, image: Image.Image, output_root: Path, entry: dict[st
         "num_frames": NUM_FRAMES,
         "num_inference_steps": STEPS,
         "guidance_scale": GUIDANCE_SCALE,
+        "fps": FPS,
         "elapsed_seconds": elapsed,
         "peak_gpu_memory_mb": float(torch.cuda.max_memory_allocated() / (1024 * 1024)) if torch.cuda.is_available() else 0.0,
     }
