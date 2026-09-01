@@ -1,5 +1,6 @@
 # Big artifacts: never commit
 runs/
+.worktrees/
 wandb/
 *.log
 *.mp4
