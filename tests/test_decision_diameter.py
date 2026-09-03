@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import math
-from pathlib import Path
 
 import pytest
 
@@ -77,7 +76,7 @@ def scan_config() -> dict[str, object]:
     }
 
 
-def test_scan_config_validation_and_hash_are_deterministic(tmp_path: Path) -> None:
+def test_scan_config_validation_and_hash_are_deterministic() -> None:
     first = validate_scan_config(scan_config())
     reordered = dict(reversed(list(scan_config().items())))
     second = validate_scan_config(reordered)
@@ -100,6 +99,35 @@ def test_scan_config_requires_independent_endpoint_binary_parent_and_representab
     bad_tolerance = scan_config()
     bad_tolerance["alpha_tolerance"] = 0.00001
     with pytest.raises(ValueError, match="at least 0.0001"):
+        validate_scan_config(bad_tolerance)
+
+
+def test_validate_scan_config_rejects_non_integer_fields() -> None:
+    bad_parent_seed = scan_config()
+    bad_parent_seed["parent_seed"] = "0"
+    with pytest.raises(ValueError, match="parent_seed must be an integer"):
+        validate_scan_config(bad_parent_seed)
+
+    bad_version = scan_config()
+    bad_version["version"] = True
+    with pytest.raises(ValueError, match="version must be an integer"):
+        validate_scan_config(bad_version)
+
+    bad_seeds = scan_config()
+    bad_seeds["direction_seeds"] = [10000, "10001"]
+    with pytest.raises(ValueError, match=r"direction_seeds\[1\] must be an integer"):
+        validate_scan_config(bad_seeds)
+
+
+def test_validate_scan_config_rejects_non_real_alpha_tolerance() -> None:
+    bad_alpha = scan_config()
+    bad_alpha["coarse_alphas"] = ["0.2", 0.4, 1.0]
+    with pytest.raises(ValueError, match=r"coarse_alphas\[0\] must be a real number"):
+        validate_scan_config(bad_alpha)
+
+    bad_tolerance = scan_config()
+    bad_tolerance["alpha_tolerance"] = "0.02"
+    with pytest.raises(ValueError, match="alpha_tolerance must be a real number"):
         validate_scan_config(bad_tolerance)
 
 
@@ -133,3 +161,32 @@ def test_sample_plan_rejects_direction_seed_mismatch() -> None:
     plan["samples"][0]["perturb_seed"] = 999
     with pytest.raises(ValueError, match="direction 0.*10000"):
         validate_sample_plan(plan, config)
+
+
+def test_sample_plan_rejects_non_integer_and_non_real_fields() -> None:
+    config = validate_scan_config(scan_config())
+    plan = make_shell_plan(config, 0.2, start_index=0)
+
+    string_index_plan = {
+        "version": plan["version"],
+        "kind": plan["kind"],
+        "samples": [dict(plan["samples"][0]), dict(plan["samples"][1])],
+    }
+    string_index_plan["samples"][0]["index"] = "0"
+    with pytest.raises(ValueError, match="sample index must be an integer"):
+        validate_sample_plan(string_index_plan, config)
+
+    bool_direction_plan = make_shell_plan(config, 0.2, start_index=0)
+    bool_direction_plan["samples"][0]["direction_index"] = True
+    with pytest.raises(ValueError, match="direction_index must be an integer"):
+        validate_sample_plan(bool_direction_plan, config)
+
+    string_seed_plan = make_shell_plan(config, 0.2, start_index=0)
+    string_seed_plan["samples"][0]["perturb_seed"] = "10000"
+    with pytest.raises(ValueError, match="perturb_seed must be an integer"):
+        validate_sample_plan(string_seed_plan, config)
+
+    string_alpha_plan = make_shell_plan(config, 0.2, start_index=0)
+    string_alpha_plan["samples"][0]["alpha"] = "0.2"
+    with pytest.raises(ValueError, match="alpha must be a real number"):
+        validate_sample_plan(string_alpha_plan, config)

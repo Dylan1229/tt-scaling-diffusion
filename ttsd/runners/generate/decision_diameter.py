@@ -26,6 +26,18 @@ def format_sample_id(direction_index: int, alpha: float) -> str:
     return f"d{direction_index:02d}_a{_alpha_code(alpha):05d}"
 
 
+def _require_int(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"{name} must be an integer")
+    return value
+
+
+def _require_real(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise ValueError(f"{name} must be a real number")
+    return float(value)
+
+
 def expected_rms_radius(alpha: float) -> float:
     alpha = float(alpha)
     if not 0 <= alpha <= 1:
@@ -82,7 +94,8 @@ def validate_scan_config(payload: Mapping[str, object]) -> dict[str, object]:
     if missing or extra:
         raise ValueError(f"scan config keys mismatch: missing={missing}, extra={extra}")
 
-    if payload["version"] != 1:
+    version = _require_int(payload["version"], name="version")
+    if version != 1:
         raise ValueError("scan config version must be 1")
 
     if not isinstance(payload["prompt"], str) or not payload["prompt"].strip():
@@ -97,13 +110,26 @@ def validate_scan_config(payload: Mapping[str, object]) -> dict[str, object]:
     if len(image_hash) != 64 or any(c not in "0123456789abcdef" for c in image_hash):
         raise ValueError("input_sha256 must be 64 lowercase hex characters")
 
-    direction_seeds = tuple(int(seed) for seed in payload["direction_seeds"])
-    coarse_alphas = tuple(float(alpha) for alpha in payload["coarse_alphas"])
+    direction_seeds_value = payload["direction_seeds"]
+    if not isinstance(direction_seeds_value, Sequence) or isinstance(direction_seeds_value, (str, bytes, bytearray)):
+        raise ValueError("direction_seeds must be a sequence")
+    direction_seeds = tuple(
+        _require_int(seed, name=f"direction_seeds[{index}]")
+        for index, seed in enumerate(direction_seeds_value)
+    )
+
+    coarse_alphas_value = payload["coarse_alphas"]
+    if not isinstance(coarse_alphas_value, Sequence) or isinstance(coarse_alphas_value, (str, bytes, bytearray)):
+        raise ValueError("coarse_alphas must be a sequence")
+    coarse_alphas = tuple(
+        _require_real(alpha, name=f"coarse_alphas[{index}]")
+        for index, alpha in enumerate(coarse_alphas_value)
+    )
     radial_specs(coarse_alphas, direction_seeds)
     if coarse_alphas[-1] != 1.0:
         raise ValueError("coarse_alphas must end at 1.0")
 
-    tolerance = float(payload["alpha_tolerance"])
+    tolerance = _require_real(payload["alpha_tolerance"], name="alpha_tolerance")
     if not 0.0001 <= tolerance < 1:
         raise ValueError("alpha_tolerance must be at least 0.0001 and less than 1")
 
@@ -112,7 +138,7 @@ def validate_scan_config(payload: Mapping[str, object]) -> dict[str, object]:
         "prompt": payload["prompt"].strip(),
         "input_path": str(payload["input_path"]),
         "input_sha256": image_hash,
-        "parent_seed": int(payload["parent_seed"]),
+        "parent_seed": _require_int(payload["parent_seed"], name="parent_seed"),
         "parent_label": payload["parent_label"],
         "semantic_criterion": payload["semantic_criterion"].strip(),
         "direction_seeds": list(direction_seeds),
@@ -132,11 +158,12 @@ def scan_config_sha256(config: Mapping[str, object]) -> str:
 
 def make_shell_plan(config: Mapping[str, object], alpha: float, *, start_index: int) -> dict[str, object]:
     validated = validate_scan_config(config)
+    alpha_value = _require_real(alpha, name="alpha")
     return {
         "version": 1,
         "kind": "coarse",
         "samples": radial_specs(
-            (alpha,),
+            (alpha_value,),
             tuple(validated["direction_seeds"]),
             start_index=start_index,
         ),
@@ -152,15 +179,15 @@ def validate_sample_plan(payload: Mapping[str, object], config: Mapping[str, obj
     if missing or extra:
         raise ValueError(f"sample plan keys mismatch: missing={missing}, extra={extra}")
 
-    if payload["version"] != 1:
-        raise ValueError("sample plan version must be 1")
-
     if payload["kind"] not in {"coarse", "refinement"}:
         raise ValueError("sample plan kind must be coarse or refinement")
 
     samples = payload["samples"]
     if not isinstance(samples, list):
         raise ValueError("samples must be a list")
+
+    if _require_int(payload["version"], name="version") != 1:
+        raise ValueError("sample plan version must be 1")
 
     seen_indices = set[int]()
     seen_sample_ids = set[str]()
@@ -178,10 +205,10 @@ def validate_sample_plan(payload: Mapping[str, object], config: Mapping[str, obj
                 f"sample keys mismatch: missing={sample_missing}, extra={sample_extra}"
             )
 
-        direction_index = int(sample["direction_index"])
-        index = int(sample["index"])
-        alpha = float(sample["alpha"])
-        perturb_seed = int(sample["perturb_seed"])
+        direction_index = _require_int(sample["direction_index"], name="direction_index")
+        index = _require_int(sample["index"], name="sample index")
+        alpha = _require_real(sample["alpha"], name="alpha")
+        perturb_seed = _require_int(sample["perturb_seed"], name="perturb_seed")
         sample_id = str(sample["sample_id"])
 
         if direction_index < 0 or direction_index >= len(direction_seeds):
