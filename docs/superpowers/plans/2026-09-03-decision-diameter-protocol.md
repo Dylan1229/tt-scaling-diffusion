@@ -13,6 +13,7 @@
 ## Global Constraints
 
 - Run every Python command, test, and model workload on SSH host `yukelab` in `/data/datasets/peihao/tt-scaling-diffusion/.worktrees/noise-neighborhood-demo`.
+- Prefix every remote Python, pytest, and model invocation with `PYTHONPATH=$PWD`; the shared remote environment otherwise resolves the base checkout before this linked worktree. This requirement overrides any command snippet below that omits the prefix.
 - Use `/home/atlas/tt-scaling-diffusion/.worktrees/noise-neighborhood-demo` only for editing, Git operations, orchestration, and Windows viewing.
 - Keep semantic labels manual: `success`, `failure`, or `ambiguous`; never add an automatic semantic scorer.
 - Hold model, scheduler, prompt, input, dimensions, frame count, inference steps, guidance, and frame rate fixed within one calibration.
@@ -287,7 +288,7 @@ def test_scan_config_validation_and_hash_are_deterministic() -> None:
     assert len(scan_config_sha256(first)) == 64
 
 
-def test_scan_config_requires_independent_endpoint_and_binary_parent_label() -> None:
+def test_scan_config_requires_independent_endpoint_binary_parent_and_representable_tolerance() -> None:
     bad_endpoint = scan_config()
     bad_endpoint["coarse_alphas"] = [0.2, 0.8]
     with pytest.raises(ValueError, match="end at 1.0"):
@@ -297,6 +298,11 @@ def test_scan_config_requires_independent_endpoint_and_binary_parent_label() -> 
     bad_label["parent_label"] = "ambiguous"
     with pytest.raises(ValueError, match="success or failure"):
         validate_scan_config(bad_label)
+
+    bad_tolerance = scan_config()
+    bad_tolerance["alpha_tolerance"] = 0.00001
+    with pytest.raises(ValueError, match="at least 0.0001"):
+        validate_scan_config(bad_tolerance)
 
 
 def test_shell_plan_uses_configured_direction_seeds() -> None:
@@ -394,8 +400,8 @@ def validate_scan_config(payload: Mapping[str, object]) -> dict[str, object]:
     if alphas[-1] != 1.0:
         raise ValueError("coarse_alphas must end at 1.0")
     tolerance = float(payload["alpha_tolerance"])
-    if not 0 < tolerance < 1:
-        raise ValueError("alpha_tolerance must satisfy 0 < value < 1")
+    if not 0.0001 <= tolerance < 1:
+        raise ValueError("alpha_tolerance must be at least 0.0001 and less than 1")
 
     return {
         "version": 1,
@@ -619,7 +625,7 @@ def _diameter_interval(alpha_interval: list[float] | None) -> list[float] | None
 
 1. Return `None` if any label is ambiguous.
 2. If fewer than half the directions have crossed and any configured coarse alpha is untested for an un-crossed direction, emit the next coarse alpha only for un-crossed directions.
-3. Otherwise, emit one midpoint for every crossed direction whose first bracket is wider than `alpha_tolerance`.
+3. Otherwise, emit one four-decimal-grid midpoint for every crossed direction whose first bracket is wider than `alpha_tolerance`: average the integer alpha codes with floor division, then divide by `10000`. This is the nearest lower midpoint when an exact midpoint is not representable in the sample ID.
 4. Assign indexes starting at `max(existing indexes) + 1`, sort samples by direction index, and use each direction's configured seed.
 5. Return `None` when all required finite brackets meet tolerance and the remaining results are complete or censored.
 
@@ -738,7 +744,7 @@ def test_plan_selection_generates_only_requested_manifest_samples(tmp_path) -> N
     entry = radial_entry()
     manifest = runner._append_neighbors(tmp_path, parent, [entry])
 
-    selected = runner._selected_specs(manifest, None, 1, None, {entry["sample_id"]})
+    selected = runner._selected_specs(manifest, 0, 1, None, {entry["sample_id"]})
     assert [sample["sample_id"] for sample in selected] == ["d00_a04000"]
 
 
@@ -752,7 +758,7 @@ def test_parser_rejects_parallel_manifest_append() -> None:
         runner._validate_cli_args(args)
 ```
 
-Add one stale-config test that sets `runner.SCAN_CONFIG_SHA256 = "b" * 64`, writes a complete bundle, changes the hash to `"c" * 64`, and asserts `_validate_preparation` reports `manifest.scan_config_sha256`.
+Add one stale-config test that uses `monkeypatch.setattr` to set `runner.SCAN_CONFIG_SHA256 = "b" * 64`, writes a complete bundle, changes the monkeypatched hash to `"c" * 64`, and asserts `_validate_preparation` reports `manifest.scan_config_sha256` without leaking global state to later tests.
 
 - [ ] **Step 2: Sync tests and verify RED remotely**
 
@@ -823,7 +829,7 @@ Add `_validate_cli_args(args)` with these literal branches:
 ```python
 if args.append_plan and args.sample_plan is None:
     raise ValueError("--append-plan requires --sample-plan")
-if args.append_plan and args.shard_index is not None:
+if args.append_plan and (args.num_shards != 1 or args.shard_index not in (None, 0)):
     raise ValueError("--append-plan cannot run in a shard")
 ```
 
@@ -1069,7 +1075,7 @@ Acceptance conditions:
 - manifest has exactly the eight planned direction/alpha records;
 - every record has a tensor, video, sheet, metadata, and completion marker;
 - rerunning the append command is a no-op;
-- after eight complete labels, the planner emits the `alpha = 0.05` shell with the same eight direction seeds;
+- after eight complete labels, the planner's next action agrees with those labels: if all remain failures it emits all eight `alpha = 0.05` samples with the same seeds; a flip, ambiguity, or mixed shell instead follows the tested refinement/adjudication rules;
 - no tracked file changes during model-backed execution.
 
 - [ ] **Step 10: Run final verification before completion**
