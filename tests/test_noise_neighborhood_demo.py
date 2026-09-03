@@ -39,6 +39,15 @@ def test_neighbor_construction_is_exact_and_reproducible() -> None:
     assert metrics["norm_ratio"] > 0
 
 
+def test_alpha_one_neighbor_is_exact_seeded_epsilon() -> None:
+    runner = load_runner()
+    parent = torch.ones((1, 2, 3), dtype=torch.float32)
+    generator = torch.Generator(device="cpu").manual_seed(17)
+    expected = torch.randn(parent.shape, generator=generator, dtype=torch.float32)
+
+    torch.testing.assert_close(runner.make_neighbor(parent, 1.0, 17), expected, rtol=0, atol=0)
+
+
 def test_specs_are_32_unique_reproducible_neighbors_partitioned_once() -> None:
     runner = load_runner()
     specs = runner.neighbor_specs()

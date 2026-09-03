@@ -56,8 +56,8 @@ def specs_for_shard(shard_index: int, num_shards: int) -> list[dict[str, int | f
 
 
 def make_neighbor(parent: torch.Tensor, alpha: float, perturb_seed: int) -> torch.Tensor:
-    if not 0 <= alpha < 1:
-        raise ValueError("alpha must satisfy 0 <= alpha < 1")
+    if not 0 <= alpha <= 1:
+        raise ValueError("alpha must satisfy 0 <= alpha <= 1")
     parent = parent.detach().to(device="cpu", dtype=torch.float32)
     generator = torch.Generator(device="cpu").manual_seed(int(perturb_seed))
     epsilon = torch.randn(parent.shape, generator=generator, dtype=torch.float32)
