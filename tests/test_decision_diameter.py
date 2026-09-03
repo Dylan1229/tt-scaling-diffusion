@@ -5,8 +5,10 @@ import math
 import pytest
 
 from ttsd.runners.generate.decision_diameter import (
+    analyze_scan,
     expected_rms_radius,
     make_shell_plan,
+    next_sample_plan,
     radial_specs,
     scan_config_sha256,
     validate_sample_plan,
@@ -190,3 +192,115 @@ def test_sample_plan_rejects_non_integer_and_non_real_fields() -> None:
     string_alpha_plan["samples"][0]["alpha"] = "0.2"
     with pytest.raises(ValueError, match="alpha must be a real number"):
         validate_sample_plan(string_alpha_plan, config)
+
+
+def four_direction_config() -> dict[str, object]:
+    config = scan_config()
+    config["direction_seeds"] = [10000, 10001, 10002, 10003]
+    config["coarse_alphas"] = [0.2, 0.4, 0.6, 1.0]
+    return validate_scan_config(config)
+
+
+def manifest_and_labels(label_grid: dict[int, list[str]]):
+    config = four_direction_config()
+    specs = radial_specs((0.2, 0.4, 0.6, 1.0), config["direction_seeds"])
+    for spec in specs:
+        spec["metrics"] = {
+            "rms_distance": spec["alpha"],
+            "cosine_similarity": 1.0 - spec["alpha"],
+            "norm_ratio": 1.0,
+        }
+    labels = [
+        {
+            "sample_id": spec["sample_id"],
+            "label": label_grid[spec["direction_index"]][
+                (0.2, 0.4, 0.6, 1.0).index(spec["alpha"])
+            ],
+        }
+        for spec in specs
+    ]
+    return config, {"neighbors": specs}, labels
+
+
+def test_analysis_reports_nearest_and_r50_brackets() -> None:
+    config, manifest, labels = manifest_and_labels(
+        {
+            0: ["failure", "success", "success", "success"],
+            1: ["failure", "failure", "success", "success"],
+            2: ["failure", "failure", "failure", "failure"],
+            3: ["failure", "failure", "failure", "failure"],
+        }
+    )
+    profile = analyze_scan(config, manifest, labels)
+    assert profile["nearest"]["alpha_interval"] == [0.2, 0.4]
+    assert profile["typical"]["alpha_interval"] == [0.4, 0.6]
+    assert profile["directions"][0]["status"] == "crossed"
+    assert profile["directions"][0]["upper_sample_metrics"] == {
+        "rms_distance": 0.4,
+        "cosine_similarity": 0.6,
+        "norm_ratio": 1.0,
+    }
+    assert profile["directions"][2]["status"] == "censored"
+
+
+def test_all_parent_labels_at_alpha_one_are_censored() -> None:
+    config, manifest, labels = manifest_and_labels(
+        {direction: ["failure"] * 4 for direction in range(4)}
+    )
+    profile = analyze_scan(config, manifest, labels)
+    assert profile["status"] == "censored"
+    assert profile["nearest"]["alpha_interval"] is None
+    assert profile["typical"]["alpha_interval"] is None
+    assert next_sample_plan(config, manifest, labels) is None
+
+
+def test_ambiguous_label_blocks_new_sampling() -> None:
+    config = four_direction_config()
+    specs = radial_specs((0.2,), config["direction_seeds"])
+    for spec in specs:
+        spec["metrics"] = {"rms_distance": 0.2, "cosine_similarity": 0.98, "norm_ratio": 1.0}
+    labels = [{"sample_id": spec["sample_id"], "label": "failure"} for spec in specs]
+    labels[0]["label"] = "ambiguous"
+    manifest = {"neighbors": specs}
+    profile = analyze_scan(config, manifest, labels)
+    assert profile["status"] == "needs_adjudication"
+    assert profile["ambiguous_sample_ids"] == ["d00_a02000"]
+    assert next_sample_plan(config, manifest, labels) is None
+
+
+def test_next_plan_expands_then_refines_crossing_midpoints() -> None:
+    config = four_direction_config()
+    first_shell = radial_specs((0.2,), config["direction_seeds"])
+    for spec in first_shell:
+        spec["metrics"] = {"rms_distance": 0.2, "cosine_similarity": 0.98, "norm_ratio": 1.0}
+    first_labels = [{"sample_id": spec["sample_id"], "label": "failure"} for spec in first_shell]
+    expansion = next_sample_plan(config, {"neighbors": first_shell}, first_labels)
+    assert [sample["alpha"] for sample in expansion["samples"]] == [0.4] * 4
+
+    _, manifest, labels = manifest_and_labels(
+        {
+            0: ["failure", "success", "success", "success"],
+            1: ["failure", "failure", "success", "success"],
+            2: ["failure", "failure", "failure", "failure"],
+            3: ["failure", "failure", "failure", "failure"],
+        }
+    )
+    refinement = next_sample_plan(config, manifest, labels)
+    assert refinement["kind"] == "refinement"
+    assert [(sample["direction_index"], sample["alpha"]) for sample in refinement["samples"]] == [
+        (0, 0.3),
+        (1, 0.5),
+    ]
+
+
+def test_analysis_flags_label_return_after_first_flip() -> None:
+    config, manifest, labels = manifest_and_labels(
+        {
+            0: ["failure", "success", "failure", "success"],
+            1: ["failure", "failure", "failure", "failure"],
+            2: ["failure", "failure", "failure", "failure"],
+            3: ["failure", "failure", "failure", "failure"],
+        }
+    )
+    profile = analyze_scan(config, manifest, labels)
+    assert profile["directions"][0]["non_monotonic"] is True
