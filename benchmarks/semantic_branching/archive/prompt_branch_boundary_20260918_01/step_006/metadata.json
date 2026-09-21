@@ -1,0 +1,438 @@
+{
+  "prompt_A": "A realistic orange tabby cat walks slowly from left to right across a green grassy meadow. Full body side view, static camera, natural daylight, smooth continuous motion.",
+  "prompt_B": "A realistic golden retriever dog walks slowly from left to right across a green grassy meadow. Full body side view, static camera, natural daylight, smooth continuous motion.",
+  "negative_prompt": "",
+  "model": "/data/datasets/fanjiang/.cache/huggingface/hub/models--Wan-AI--Wan2.2-TI2V-5B-Diffusers/snapshots/b8fff7315c768468a5333511427288870b2e9635",
+  "seed": 0,
+  "steps": 50,
+  "height": 480,
+  "width": 832,
+  "num_frames": 81,
+  "fps": 24,
+  "guidance_scale": 5.0,
+  "max_sequence_length": 512,
+  "prompt_A_embedding_sha256": "c91a1b625ffaf2506b503a74043e17dcdca0c762ca49213a3f7ec1d92787dec9",
+  "prompt_B_embedding_sha256": "7d0c66b27140405a17cd4912c47058b810d605fb8f1cfc2c4f218a6d69fd90e5",
+  "negative_embedding_sha256": "70c835ccca333cf466be3b18eb825e1a02afa6ac66bf8c22d218f9a18300a828",
+  "mode": "prompt_switch",
+  "switch_after_completed_steps": 6,
+  "scheduler": "UniPCMultistepScheduler",
+  "scheduler_config": {
+    "num_train_timesteps": 1000,
+    "beta_start": 0.0001,
+    "beta_end": 0.02,
+    "beta_schedule": "linear",
+    "trained_betas": null,
+    "solver_order": 2,
+    "prediction_type": "flow_prediction",
+    "thresholding": false,
+    "dynamic_thresholding_ratio": 0.995,
+    "sample_max_value": 1.0,
+    "predict_x0": true,
+    "solver_type": "bh2",
+    "lower_order_final": true,
+    "disable_corrector": [],
+    "solver_p": null,
+    "use_karras_sigmas": false,
+    "use_exponential_sigmas": false,
+    "use_beta_sigmas": false,
+    "use_flow_sigmas": true,
+    "flow_shift": 5.0,
+    "timestep_spacing": "linspace",
+    "steps_offset": 0,
+    "final_sigmas_type": "zero",
+    "rescale_betas_zero_snr": false,
+    "use_dynamic_shifting": false,
+    "time_shift_type": "exponential",
+    "sigma_min": null,
+    "sigma_max": null,
+    "shift_terminal": null,
+    "_use_default_values": [
+      "sigma_min",
+      "shift_terminal",
+      "sigma_max"
+    ],
+    "_class_name": "UniPCMultistepScheduler",
+    "_diffusers_version": "0.35.0.dev0"
+  },
+  "diffusers": "0.38.0",
+  "torch": "2.7.1+cu128",
+  "physical_gpu": "5",
+  "steps_log": [
+    {
+      "completed_steps": 1,
+      "model_timestep": 999.0,
+      "sigma_after": 0.9959390759468079,
+      "conditioning_used": "A",
+      "elapsed_seconds": 1.2558634281158447,
+      "latent_sha256": "9585bbb7bc2e39b7865408b57d9020b12e663418cca10a84ef94180d502d1491"
+    },
+    {
+      "completed_steps": 2,
+      "model_timestep": 995.0,
+      "sigma_after": 0.9917441010475159,
+      "conditioning_used": "A",
+      "elapsed_seconds": 2.418020725250244,
+      "latent_sha256": "68e45b96776bcda483cc59f999d8a9d60ade96733a21d27db2cba06308edc194"
+    },
+    {
+      "completed_steps": 3,
+      "model_timestep": 991.0,
+      "sigma_after": 0.9874082207679749,
+      "conditioning_used": "A",
+      "elapsed_seconds": 3.593295097351074,
+      "latent_sha256": "55feca4fb0193d29681236a1271c82e3c7ee7ace1a31c50eea2820ed181d06f1"
+    },
+    {
+      "completed_steps": 4,
+      "model_timestep": 987.0,
+      "sigma_after": 0.982924222946167,
+      "conditioning_used": "A",
+      "elapsed_seconds": 4.75510835647583,
+      "latent_sha256": "3eaabeb2d975dd86ff9d699c5203ae295262900abefee900c3a179cee0ac58d7"
+    },
+    {
+      "completed_steps": 5,
+      "model_timestep": 982.0,
+      "sigma_after": 0.978284478187561,
+      "conditioning_used": "A",
+      "elapsed_seconds": 5.9155402183532715,
+      "latent_sha256": "703f0a3174a9897400198612d5728dd0d823f8bc421baf2ce0449835bd2ddc41"
+    },
+    {
+      "completed_steps": 6,
+      "model_timestep": 978.0,
+      "sigma_after": 0.9734807014465332,
+      "conditioning_used": "A",
+      "elapsed_seconds": 7.070934057235718,
+      "latent_sha256": "bd5aa9525500d6578158b6c09383db549812e3174048fb5f625ed53651a6e9ae",
+      "scheduler_step_index": 6,
+      "scheduler_lower_order_nums": 2,
+      "scheduler_history_sha256": [
+        "883f8df3788752ca33c614cd8da6e8f9353ba7407ca74dc30e359290cd1fd621",
+        "1986135705748b056ed8f918fa7c4a230dcdba1835f4319ce2b290ebc118d5ea"
+      ],
+      "switch_prompt_after_this_step": true
+    },
+    {
+      "completed_steps": 7,
+      "model_timestep": 973.0,
+      "sigma_after": 0.9685039520263672,
+      "conditioning_used": "B",
+      "elapsed_seconds": 8.233218908309937,
+      "latent_sha256": "613469a8962d8056e936d483bb358db5910902f42a0a3888e44652f65046266d"
+    },
+    {
+      "completed_steps": 8,
+      "model_timestep": 968.0,
+      "sigma_after": 0.9633448123931885,
+      "conditioning_used": "B",
+      "elapsed_seconds": 9.378514528274536
+    },
+    {
+      "completed_steps": 9,
+      "model_timestep": 963.0,
+      "sigma_after": 0.9579930305480957,
+      "conditioning_used": "B",
+      "elapsed_seconds": 10.518410921096802
+    },
+    {
+      "completed_steps": 10,
+      "model_timestep": 957.0,
+      "sigma_after": 0.9524376392364502,
+      "conditioning_used": "B",
+      "elapsed_seconds": 11.651706218719482
+    },
+    {
+      "completed_steps": 11,
+      "model_timestep": 952.0,
+      "sigma_after": 0.9466667175292969,
+      "conditioning_used": "B",
+      "elapsed_seconds": 12.777323007583618
+    },
+    {
+      "completed_steps": 12,
+      "model_timestep": 946.0,
+      "sigma_after": 0.9406675696372986,
+      "conditioning_used": "B",
+      "elapsed_seconds": 13.901451349258423
+    },
+    {
+      "completed_steps": 13,
+      "model_timestep": 940.0,
+      "sigma_after": 0.9344263076782227,
+      "conditioning_used": "B",
+      "elapsed_seconds": 15.021617889404297
+    },
+    {
+      "completed_steps": 14,
+      "model_timestep": 934.0,
+      "sigma_after": 0.9279280304908752,
+      "conditioning_used": "B",
+      "elapsed_seconds": 16.139922857284546
+    },
+    {
+      "completed_steps": 15,
+      "model_timestep": 927.0,
+      "sigma_after": 0.9211564660072327,
+      "conditioning_used": "B",
+      "elapsed_seconds": 17.2581946849823
+    },
+    {
+      "completed_steps": 16,
+      "model_timestep": 921.0,
+      "sigma_after": 0.914094090461731,
+      "conditioning_used": "B",
+      "elapsed_seconds": 18.37595772743225
+    },
+    {
+      "completed_steps": 17,
+      "model_timestep": 914.0,
+      "sigma_after": 0.9067216515541077,
+      "conditioning_used": "B",
+      "elapsed_seconds": 19.49358606338501
+    },
+    {
+      "completed_steps": 18,
+      "model_timestep": 906.0,
+      "sigma_after": 0.8990183472633362,
+      "conditioning_used": "B",
+      "elapsed_seconds": 20.61158561706543
+    },
+    {
+      "completed_steps": 19,
+      "model_timestep": 899.0,
+      "sigma_after": 0.8909614086151123,
+      "conditioning_used": "B",
+      "elapsed_seconds": 21.729374647140503
+    },
+    {
+      "completed_steps": 20,
+      "model_timestep": 890.0,
+      "sigma_after": 0.8825258612632751,
+      "conditioning_used": "B",
+      "elapsed_seconds": 22.847164630889893
+    },
+    {
+      "completed_steps": 21,
+      "model_timestep": 882.0,
+      "sigma_after": 0.8736844062805176,
+      "conditioning_used": "B",
+      "elapsed_seconds": 23.964973211288452
+    },
+    {
+      "completed_steps": 22,
+      "model_timestep": 873.0,
+      "sigma_after": 0.8644070029258728,
+      "conditioning_used": "B",
+      "elapsed_seconds": 25.083141565322876
+    },
+    {
+      "completed_steps": 23,
+      "model_timestep": 864.0,
+      "sigma_after": 0.8546605706214905,
+      "conditioning_used": "B",
+      "elapsed_seconds": 26.2011821269989
+    },
+    {
+      "completed_steps": 24,
+      "model_timestep": 854.0,
+      "sigma_after": 0.8444086909294128,
+      "conditioning_used": "B",
+      "elapsed_seconds": 27.319329500198364
+    },
+    {
+      "completed_steps": 25,
+      "model_timestep": 844.0,
+      "sigma_after": 0.8336109519004822,
+      "conditioning_used": "B",
+      "elapsed_seconds": 28.43726372718811
+    },
+    {
+      "completed_steps": 26,
+      "model_timestep": 833.0,
+      "sigma_after": 0.8222225308418274,
+      "conditioning_used": "B",
+      "elapsed_seconds": 29.555667400360107
+    },
+    {
+      "completed_steps": 27,
+      "model_timestep": 822.0,
+      "sigma_after": 0.810193657875061,
+      "conditioning_used": "B",
+      "elapsed_seconds": 30.673965215682983
+    },
+    {
+      "completed_steps": 28,
+      "model_timestep": 810.0,
+      "sigma_after": 0.7974687218666077,
+      "conditioning_used": "B",
+      "elapsed_seconds": 31.79203200340271
+    },
+    {
+      "completed_steps": 29,
+      "model_timestep": 797.0,
+      "sigma_after": 0.7839854955673218,
+      "conditioning_used": "B",
+      "elapsed_seconds": 32.91007876396179
+    },
+    {
+      "completed_steps": 30,
+      "model_timestep": 783.0,
+      "sigma_after": 0.7696741223335266,
+      "conditioning_used": "B",
+      "elapsed_seconds": 34.02836060523987
+    },
+    {
+      "completed_steps": 31,
+      "model_timestep": 769.0,
+      "sigma_after": 0.7544559240341187,
+      "conditioning_used": "B",
+      "elapsed_seconds": 35.146289587020874
+    },
+    {
+      "completed_steps": 32,
+      "model_timestep": 754.0,
+      "sigma_after": 0.7382418513298035,
+      "conditioning_used": "B",
+      "elapsed_seconds": 36.26439356803894
+    },
+    {
+      "completed_steps": 33,
+      "model_timestep": 738.0,
+      "sigma_after": 0.720930814743042,
+      "conditioning_used": "B",
+      "elapsed_seconds": 37.38254642486572
+    },
+    {
+      "completed_steps": 34,
+      "model_timestep": 720.0,
+      "sigma_after": 0.7024076581001282,
+      "conditioning_used": "B",
+      "elapsed_seconds": 38.500765800476074
+    },
+    {
+      "completed_steps": 35,
+      "model_timestep": 702.0,
+      "sigma_after": 0.6825404167175293,
+      "conditioning_used": "B",
+      "elapsed_seconds": 39.61918520927429
+    },
+    {
+      "completed_steps": 36,
+      "model_timestep": 682.0,
+      "sigma_after": 0.6611772775650024,
+      "conditioning_used": "B",
+      "elapsed_seconds": 40.737387895584106
+    },
+    {
+      "completed_steps": 37,
+      "model_timestep": 661.0,
+      "sigma_after": 0.6381427049636841,
+      "conditioning_used": "B",
+      "elapsed_seconds": 41.85565757751465
+    },
+    {
+      "completed_steps": 38,
+      "model_timestep": 638.0,
+      "sigma_after": 0.6132325530052185,
+      "conditioning_used": "B",
+      "elapsed_seconds": 42.97386932373047
+    },
+    {
+      "completed_steps": 39,
+      "model_timestep": 613.0,
+      "sigma_after": 0.5862079858779907,
+      "conditioning_used": "B",
+      "elapsed_seconds": 44.09201097488403
+    },
+    {
+      "completed_steps": 40,
+      "model_timestep": 586.0,
+      "sigma_after": 0.55678790807724,
+      "conditioning_used": "B",
+      "elapsed_seconds": 45.21058750152588
+    },
+    {
+      "completed_steps": 41,
+      "model_timestep": 556.0,
+      "sigma_after": 0.5246390700340271,
+      "conditioning_used": "B",
+      "elapsed_seconds": 46.328967809677124
+    },
+    {
+      "completed_steps": 42,
+      "model_timestep": 524.0,
+      "sigma_after": 0.48936325311660767,
+      "conditioning_used": "B",
+      "elapsed_seconds": 47.447359561920166
+    },
+    {
+      "completed_steps": 43,
+      "model_timestep": 489.0,
+      "sigma_after": 0.45048099756240845,
+      "conditioning_used": "B",
+      "elapsed_seconds": 48.56584191322327
+    },
+    {
+      "completed_steps": 44,
+      "model_timestep": 450.0,
+      "sigma_after": 0.4074093997478485,
+      "conditioning_used": "B",
+      "elapsed_seconds": 49.684284925460815
+    },
+    {
+      "completed_steps": 45,
+      "model_timestep": 407.0,
+      "sigma_after": 0.3594328761100769,
+      "conditioning_used": "B",
+      "elapsed_seconds": 50.80280780792236
+    },
+    {
+      "completed_steps": 46,
+      "model_timestep": 359.0,
+      "sigma_after": 0.30566298961639404,
+      "conditioning_used": "B",
+      "elapsed_seconds": 51.921082496643066
+    },
+    {
+      "completed_steps": 47,
+      "model_timestep": 305.0,
+      "sigma_after": 0.24498295783996582,
+      "conditioning_used": "B",
+      "elapsed_seconds": 53.03945302963257
+    },
+    {
+      "completed_steps": 48,
+      "model_timestep": 244.0,
+      "sigma_after": 0.175969198346138,
+      "conditioning_used": "B",
+      "elapsed_seconds": 54.158007860183716
+    },
+    {
+      "completed_steps": 49,
+      "model_timestep": 175.0,
+      "sigma_after": 0.09677836298942566,
+      "conditioning_used": "B",
+      "elapsed_seconds": 55.276241064071655
+    },
+    {
+      "completed_steps": 50,
+      "model_timestep": 96.0,
+      "sigma_after": 0.0,
+      "conditioning_used": "B",
+      "elapsed_seconds": 56.394508600234985,
+      "latent_sha256": "9c0fc02af24ec6f343291be7ca433b8855ac9829fd647f452d623cbdfde39ce9"
+    }
+  ],
+  "status": "complete",
+  "method": "Native prompt switch after k completed steps; original float32 latent and UniPC history retained. Same-seed prefix replay; no re-noise.",
+  "generation_and_decode_seconds": 65.54711556434631,
+  "frame_shape": [
+    81,
+    480,
+    832,
+    3
+  ],
+  "video_sha256": "4af5646d0a20c56763c3d1dfeec9efdb18d55e4ffdc0bb538fa43ce5f863b290"
+}

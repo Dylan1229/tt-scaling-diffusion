@@ -1,0 +1,46 @@
+{
+  "panels": [
+    {
+      "label": "Original cat (A throughout)",
+      "frames": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/original_cat/frames_uint8.npy"
+    },
+    {
+      "label": "Prompt switch at step 40",
+      "frames": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_040/frames_uint8.npy"
+    },
+    {
+      "label": "Step 40 + fresh noise -> step 4; dog",
+      "frames": "/data/datasets/peihao/tt-scaling-diffusion/runs/renoise_step40_to04_20260921_01/frames_uint8.npy"
+    }
+  ],
+  "sampled_frame_indices": [
+    0,
+    16,
+    32,
+    48,
+    64,
+    80
+  ],
+  "files": {
+    "video.mp4": {
+      "bytes": 851662,
+      "sha256": "caa964fa663b4a2c4f5923dd5bb3980ce71e30243f96015c440a1ea428450c1f"
+    },
+    "comparison.mp4": {
+      "bytes": 1556223,
+      "sha256": "6df38f0a91597e0b886eb1d87bdf5169850da38c7841a4912d7c27c397adba56"
+    },
+    "comparison.jpg": {
+      "bytes": 3651291,
+      "sha256": "1026eb99ee54562316e78b23540e4adc99a7b8fec04a42892908b2785adafd75"
+    },
+    "all_frames.jpg": {
+      "bytes": 3178767,
+      "sha256": "c4edc539e64c371c73306b559f17939c20f02e0d4f2160306ec7ea7e9a996632"
+    },
+    "metadata.json": {
+      "bytes": 15836,
+      "sha256": "6839215d700dbec3c4b033faa40aa9e82350d11d459b218bae09191e9525d59e"
+    }
+  }
+}

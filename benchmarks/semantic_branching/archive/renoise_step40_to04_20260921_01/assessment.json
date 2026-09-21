@@ -1,0 +1,8 @@
+{
+  "semantic_change_observed": true,
+  "target_identity": "Recognizable golden retriever dog throughout all81 inspected frames.",
+  "no_renoise_control": "The existing prompt-switch-at40 control remains an orange tabby cat.",
+  "visual_quality": "Not a clean-quality pass: conspicuous black/white shoe-like artifacts and distorted leg anatomy. Direction and view do not fully match the side-view left-to-right prompt.",
+  "conclusion": "One-case feasibility of late-state semantic change by fresh random re-noising demonstrated; normal anatomical quality and reliability across seeds not established.",
+  "scope": "One source case, one fresh-noise seed; no strength/timestep sweep."
+}

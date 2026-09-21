@@ -1,0 +1,25 @@
+{
+  "scope": "Three fresh-noise seeds on one fixed source latent; qualitative comparison, no success-rate estimate.",
+  "fixed_intervention": "Same step40 cat latent, same re-noising coefficients to sigma4, same dog prompt and46-step UniPC restart.",
+  "semantic_result": "All three show recognizable golden-retriever-like dogs throughout the inspected81-frame sequences, with no visible return to cat identity.",
+  "common_behavior": "All remain broadly in rear/side or rear-three-quarter views, heading left/away rather than following the requested left-to-right full-side-view path. This resembles the original source orientation; this comparison alone does not isolate the causal source of that resemblance.",
+  "samples": [
+    {
+      "sample": 1,
+      "seed": 20260922,
+      "observations": "Orange-brown coat, raised-leg gait, lower/bunched tail, patchier grass with pale bare streaks. Rear-side view becomes more rear-facing. Fur and limb contours are somewhat smeared."
+    },
+    {
+      "sample": 2,
+      "seed": 20260923,
+      "observations": "Longer-looking body and more side-on initial view; low sweeping feathered tail. Turns to rear-three-quarter and recedes markedly across the grass. Some waxy fur and awkward limb contours."
+    },
+    {
+      "sample": 3,
+      "seed": 20260924,
+      "observations": "Rounder torso, upright pale fluffy tail, rear-three-quarter view from the start. More conspicuous rounded underside and rubbery hindquarter/leg shapes."
+    }
+  ],
+  "conclusion": "Fresh noise changes visible dog appearance, body/tail pose, gait and background texture while all three retain dog identity. These are three diverse semantic conversions, not anatomically flawless outputs.",
+  "review_evidence": "All81 frames per result in chronological sheets, full-resolution frames0/40/80, and matched six-frame contact sheet."
+}

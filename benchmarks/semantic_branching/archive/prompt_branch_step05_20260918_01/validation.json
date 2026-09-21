@@ -1,0 +1,18 @@
+{
+  "same_seed": true,
+  "identical_A_and_branch_prefix_steps_1_to_5": [
+    true,
+    true,
+    true,
+    true,
+    true
+  ],
+  "identical_UniPC_model_output_history_at_branch": true,
+  "different_latent_after_step_6": true,
+  "branch_conditioning": "5 steps A, 45 steps B",
+  "sigma_at_branch": 0.978284478187561,
+  "num_cases": 1,
+  "num_seeds": 1,
+  "interpretation": "Execution and intervention checks only. Semantic effect requires visual inspection.",
+  "compute": "Three 50-step runs (150 steps total); A prefix replayed for exact-state verification."
+}

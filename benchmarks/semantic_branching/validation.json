@@ -1,0 +1,17 @@
+{
+  "created_utc": "2026-09-21T11:35:54.569987+00:00",
+  "source_run_count": 4,
+  "unique_conditions": 56,
+  "completed_executions": 57,
+  "logged_denoising_updates": 2834,
+  "all_metadata_conditioning_traces_verified": true,
+  "all_archived_files_match_source_sha256": true,
+  "all_video_sha256_match_metadata": true,
+  "unique_condition_video_hash_count": 56,
+  "generated_markdown_links_checked": 137,
+  "raw_run_symlink_count": 4,
+  "raw_file_count": 116,
+  "raw_bytes_retained_remote": 5902744483,
+  "archived_file_count": 323,
+  "archived_bytes": 122960341
+}

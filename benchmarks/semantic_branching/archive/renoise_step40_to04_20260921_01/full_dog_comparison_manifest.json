@@ -1,0 +1,33 @@
+{
+  "same_noise_sha256": "99054ef67997fffdff620929784903434ec837fc3cd3b71b3156bdadd6023be3",
+  "sampled_frames": [
+    0,
+    16,
+    32,
+    48,
+    64,
+    80
+  ],
+  "files": {
+    "renoise_vs_full_dog.mp4": {
+      "bytes": 1391745,
+      "sha256": "f2cec598f24030150827fc0ae40883bfa94ea3fbd3325a5bc7284aec47a05649"
+    },
+    "renoise_vs_full_dog.jpg": {
+      "bytes": 2265483,
+      "sha256": "cef4f2d3015ed36746a1f22e9fbe3bb1101070fa9bcb5649846bcd924429724c"
+    },
+    "full_dog_fresh_noise/video.mp4": {
+      "bytes": 528422,
+      "sha256": "4107d7612d3e5a237f44e8c3d743dc3596665f998c5ef225acc0a296c8ffac76"
+    },
+    "full_dog_fresh_noise/metadata.json": {
+      "bytes": 13244,
+      "sha256": "f6b424b9fa14e96c242bfb0da6ca3131e39262324f127295423084257c3bc5a2"
+    },
+    "full_dog_fresh_noise/all_frames.jpg": {
+      "bytes": 2826468,
+      "sha256": "925a6519e178b9b64b738d9bf5b5d7c7a76b11773d4f2263be6b1dc787ec2da1"
+    }
+  }
+}

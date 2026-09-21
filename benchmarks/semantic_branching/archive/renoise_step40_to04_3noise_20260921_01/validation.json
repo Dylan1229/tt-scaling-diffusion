@@ -1,0 +1,42 @@
+{
+  "noise_seeds": [
+    20260922,
+    20260923,
+    20260924
+  ],
+  "fixed_fields_checked": [
+    "model",
+    "prompt_A",
+    "prompt_B",
+    "negative_prompt",
+    "seed",
+    "steps",
+    "height",
+    "width",
+    "num_frames",
+    "fps",
+    "guidance_scale",
+    "max_sequence_length",
+    "source_latent_sha256",
+    "source_completed_steps",
+    "target_completed_steps",
+    "sigma_source",
+    "sigma_target",
+    "source_coefficient",
+    "fresh_noise_coefficient",
+    "remaining_denoising_steps",
+    "scheduler_config",
+    "prompt_B_embedding_sha256",
+    "negative_embedding_sha256"
+  ],
+  "same_source_latent": true,
+  "source_latent_sha256": "6963c308f0c962fcfc1c1ace911cf563bbce4ed8ee29e5ba8838500811091ac8",
+  "distinct_noise_hashes": true,
+  "distinct_renoised_latent_hashes": true,
+  "distinct_video_hashes": true,
+  "all_three_complete_46_dog_steps": true,
+  "sigma_source": 0.55678790807724,
+  "sigma_target": 0.982924222946167,
+  "source_coefficient": 0.03852732667954569,
+  "fresh_noise_coefficient": 0.9826901134503093
+}

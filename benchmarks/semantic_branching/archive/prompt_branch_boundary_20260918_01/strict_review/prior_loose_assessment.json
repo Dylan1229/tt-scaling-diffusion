@@ -1,0 +1,111 @@
+{
+  "case_count": 1,
+  "seed": 0,
+  "switch_positions": [
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49
+  ],
+  "denoising_steps": 50,
+  "visual_review_frames": [
+    0,
+    16,
+    32,
+    48,
+    64,
+    80
+  ],
+  "larger_review_frames_for_steps_9_to_14": [
+    0,
+    16
+  ],
+  "assessment_method": "Qualitative visual inspection, with independent second review of the transition and late-stage frames; no formal semantic score or generalization claim.",
+  "bands": [
+    {
+      "steps": [
+        5,
+        10
+      ],
+      "label": "clear_target_like_dog",
+      "description": "明确的目标金毛犬外形"
+    },
+    {
+      "steps": [
+        11,
+        14
+      ],
+      "label": "off_target_canine",
+      "description": "仍有明显犬类外形，但偏离金毛；不可视为完全没有语义改变"
+    },
+    {
+      "steps": [
+        15,
+        24
+      ],
+      "label": "cat_dominant_transition",
+      "description": "逐渐偏猫的混合体，犬类嘴部或局部异常仍可见"
+    },
+    {
+      "steps": [
+        25,
+        49
+      ],
+      "label": "cat_identity_retained",
+      "description": "主体保持猫；不排除局部细节变化，29–49无重新变狗的例外"
+    }
+  ],
+  "latest_observed_clean_target_like_dog_switch": 10,
+  "contiguous_clean_target_like_interval_tested": [
+    5,
+    10
+  ],
+  "universal_latest_semantic_branching_step": null,
+  "all_45_prefix_and_UniPC_history_checks_pass": true,
+  "later_effect_note": "A cutoff for clean target appearance is not a cutoff for all semantic influence. Steps 11–14 remain canine-like; later local canine features may remain.",
+  "new_runs": 45,
+  "new_denoising_steps_total": 2250,
+  "new_run_breakdown": "44 switch positions6–49 plus one full-cat reference; prior k5 and full-dog control reused.",
+  "worker_sha256": "c4ee662d828f2eb0aa432035b97b2ef58c70b62bbaeebdb4eba0ad809af4a5ce"
+}

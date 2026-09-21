@@ -1,0 +1,107 @@
+[
+  {
+    "step": 5,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.978284478187561,
+    "different_latent_next_step": true
+  },
+  {
+    "step": 6,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.9734807014465332,
+    "different_latent_next_step": true
+  },
+  {
+    "step": 7,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.9685039520263672,
+    "different_latent_next_step": true
+  },
+  {
+    "step": 8,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.9633448123931885,
+    "different_latent_next_step": true
+  },
+  {
+    "step": 9,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.9579930305480957,
+    "different_latent_next_step": true
+  },
+  {
+    "step": 10,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.9524376392364502,
+    "different_latent_next_step": true
+  },
+  {
+    "step": 11,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.9466667175292969,
+    "different_latent_next_step": true
+  },
+  {
+    "step": 12,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.9406675696372986,
+    "different_latent_next_step": true
+  },
+  {
+    "step": 13,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.9344263076782227,
+    "different_latent_next_step": true
+  },
+  {
+    "step": 14,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.9279280304908752,
+    "different_latent_next_step": true
+  },
+  {
+    "step": 15,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.9211564660072327,
+    "different_latent_next_step": true
+  },
+  {
+    "step": 16,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.914094090461731,
+    "different_latent_next_step": true
+  },
+  {
+    "step": 17,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.9067216515541077,
+    "different_latent_next_step": true
+  },
+  {
+    "step": 18,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.8990183472633362,
+    "different_latent_next_step": true
+  },
+  {
+    "step": 20,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.8825258612632751,
+    "different_latent_next_step": true
+  }
+]

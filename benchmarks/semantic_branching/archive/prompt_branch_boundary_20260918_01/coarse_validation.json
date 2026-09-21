@@ -1,0 +1,58 @@
+[
+  {
+    "step": 5,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.978284478187561,
+    "different_latent_next_step": true
+  },
+  {
+    "step": 10,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.9524376392364502,
+    "different_latent_next_step": true
+  },
+  {
+    "step": 15,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.9211564660072327,
+    "different_latent_next_step": true
+  },
+  {
+    "step": 20,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.8825258612632751,
+    "different_latent_next_step": true
+  },
+  {
+    "step": 25,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.8336109519004822,
+    "different_latent_next_step": true
+  },
+  {
+    "step": 30,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.7696741223335266,
+    "different_latent_next_step": true
+  },
+  {
+    "step": 40,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.55678790807724,
+    "different_latent_next_step": true
+  },
+  {
+    "step": 45,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.3594328761100769,
+    "different_latent_next_step": true
+  }
+]

@@ -1,0 +1,7 @@
+raw_runs/
+archive/**/*.jpg
+archive/**/*.jpeg
+archive/**/*.png
+archive/**/*.mp4
+archive/**/*.log
+__pycache__/

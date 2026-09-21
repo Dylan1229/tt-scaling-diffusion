@@ -1,0 +1,469 @@
+{
+  "image": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/prompt_branching_all_steps_00-50_seed0_frame16_2026-09-18.jpg",
+  "size": [
+    5118,
+    5036
+  ],
+  "tiles": [
+    {
+      "k": 0,
+      "kind": "dog_control",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_step05_20260918_01/target_dog",
+      "frame_index": 16,
+      "row": 0,
+      "col": 0,
+      "frame_sha256": "4398eddd92470d5b21de92bc91f3067d12b13e2e3237dc5974db3e56d4380db3"
+    },
+    {
+      "k": 1,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_001",
+      "frame_index": 16,
+      "row": 0,
+      "col": 1,
+      "frame_sha256": "22fc9f0adba36ef488a83ab37e1e9c49fd477e7a2c66bcfd14f4ea6755f8532c"
+    },
+    {
+      "k": 2,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_002",
+      "frame_index": 16,
+      "row": 0,
+      "col": 2,
+      "frame_sha256": "72cb760af119bc66a3c4096b5a23b242d0566b5e37f645b599df836d08516c87"
+    },
+    {
+      "k": 3,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_003",
+      "frame_index": 16,
+      "row": 0,
+      "col": 3,
+      "frame_sha256": "da0a7977f6bd5e8c5e8f869440cbed21d8f2b9ae5543026c886be5e3f71e1110"
+    },
+    {
+      "k": 4,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_004",
+      "frame_index": 16,
+      "row": 0,
+      "col": 4,
+      "frame_sha256": "0795225c3aefcd7632c35d29061729d51787184830d3ad7965ad847050994d5f"
+    },
+    {
+      "k": 5,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_step05_20260918_01/switch_step05",
+      "frame_index": 16,
+      "row": 0,
+      "col": 5,
+      "frame_sha256": "210333f0bb426fe80c98e2d779a59384284f50ea91a5f032d80862c7c1da5518"
+    },
+    {
+      "k": 6,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_006",
+      "frame_index": 16,
+      "row": 1,
+      "col": 0,
+      "frame_sha256": "7601cf32d29d64dd6c04b4b85776fca4d1cf9667a8e2705f91b65e2e8c2aebe7"
+    },
+    {
+      "k": 7,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_007",
+      "frame_index": 16,
+      "row": 1,
+      "col": 1,
+      "frame_sha256": "954f73ac5f0b96213ed301463053245451e08ef53429f35f3294ca04cf057f0b"
+    },
+    {
+      "k": 8,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_008",
+      "frame_index": 16,
+      "row": 1,
+      "col": 2,
+      "frame_sha256": "9446394797da88eadeebe9905e74fe283fe4e60e661d058af21b7d896aea4078"
+    },
+    {
+      "k": 9,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_009",
+      "frame_index": 16,
+      "row": 1,
+      "col": 3,
+      "frame_sha256": "a9ff6e4a188579497ecb8c93ebf3d265ab0a9710666c75e1537c7700a9c8becb"
+    },
+    {
+      "k": 10,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_010",
+      "frame_index": 16,
+      "row": 1,
+      "col": 4,
+      "frame_sha256": "d3b676620a98dcb241b3e777ae50c40e702b489d796daff3670b045811f8d070"
+    },
+    {
+      "k": 11,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_011",
+      "frame_index": 16,
+      "row": 1,
+      "col": 5,
+      "frame_sha256": "93ce6bf2eeb8c72c813ccd76398351e1c9919dd1ce1fe196e9bd8bfe097bba6f"
+    },
+    {
+      "k": 12,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_012",
+      "frame_index": 16,
+      "row": 2,
+      "col": 0,
+      "frame_sha256": "3178f4dccabec9486b86615ee4dcbe333ccab918b67635b7f866ce22334bd732"
+    },
+    {
+      "k": 13,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_013",
+      "frame_index": 16,
+      "row": 2,
+      "col": 1,
+      "frame_sha256": "be35a7ab7c004f145cae4b372f71c9981ad93986f10544666425f0e35c9d5d84"
+    },
+    {
+      "k": 14,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_014",
+      "frame_index": 16,
+      "row": 2,
+      "col": 2,
+      "frame_sha256": "9c17a8be60737d823d7ec435109213490a90ad12d199a00e773bc76c1fee6eee"
+    },
+    {
+      "k": 15,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_015",
+      "frame_index": 16,
+      "row": 2,
+      "col": 3,
+      "frame_sha256": "c2f746642fbc37e33890f6fb4b349682f7086e164b2e2f0319971afe0a88273b"
+    },
+    {
+      "k": 16,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_016",
+      "frame_index": 16,
+      "row": 2,
+      "col": 4,
+      "frame_sha256": "0ae0735b465fe53ca4a31c5ec90f1a1b513a90a312c2748bcc630b658116dfef"
+    },
+    {
+      "k": 17,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_017",
+      "frame_index": 16,
+      "row": 2,
+      "col": 5,
+      "frame_sha256": "a255d1c322e2e6b22d8f6661ccba83e0eaad6194b7b386d431b35287791176c9"
+    },
+    {
+      "k": 18,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_018",
+      "frame_index": 16,
+      "row": 3,
+      "col": 0,
+      "frame_sha256": "fbc4ca2fa27f8e74515f7542bf327e5e7fb47c6f535924b3079fa1a0d365474c"
+    },
+    {
+      "k": 19,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_019",
+      "frame_index": 16,
+      "row": 3,
+      "col": 1,
+      "frame_sha256": "62fe4ad11e046b6c4079b9159f039cc2c186ffdbfd6091547c5edebb915c6464"
+    },
+    {
+      "k": 20,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_020",
+      "frame_index": 16,
+      "row": 3,
+      "col": 2,
+      "frame_sha256": "babf433849519b8f3c829ba2c019c1d2f4f656424af830e92543c9e88e2639c8"
+    },
+    {
+      "k": 21,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_021",
+      "frame_index": 16,
+      "row": 3,
+      "col": 3,
+      "frame_sha256": "2cc416ae2e5c962d20d20ff29d442b45cce55bf47aa38aa2c399892748e282fa"
+    },
+    {
+      "k": 22,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_022",
+      "frame_index": 16,
+      "row": 3,
+      "col": 4,
+      "frame_sha256": "a044217258dae77bf91af2f6fce3ad5d868708da255b9a68dcc26d570e491d68"
+    },
+    {
+      "k": 23,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_023",
+      "frame_index": 16,
+      "row": 3,
+      "col": 5,
+      "frame_sha256": "117630a6e2c5a675e3001ae11c1610eeb3957234b9e6c60b09fddd1db00e7856"
+    },
+    {
+      "k": 24,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_024",
+      "frame_index": 16,
+      "row": 4,
+      "col": 0,
+      "frame_sha256": "df069f228b39078064490bb2c54f23d5dc500ed99c27cb5330d559ba420ae7c5"
+    },
+    {
+      "k": 25,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_025",
+      "frame_index": 16,
+      "row": 4,
+      "col": 1,
+      "frame_sha256": "c84c892b35fd33b945f94f3d63f07f84078d723f2f19ac38500bd815bd1d447a"
+    },
+    {
+      "k": 26,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_026",
+      "frame_index": 16,
+      "row": 4,
+      "col": 2,
+      "frame_sha256": "4751c2c1c7a3acae09b6c584728f9a32c2308bc708b590183cde79860b007bac"
+    },
+    {
+      "k": 27,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_027",
+      "frame_index": 16,
+      "row": 4,
+      "col": 3,
+      "frame_sha256": "2854d9c69a4f7f6ee3b96db30b4dc50dc7a3acb6abb02f8a8e3200b5708a264e"
+    },
+    {
+      "k": 28,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_028",
+      "frame_index": 16,
+      "row": 4,
+      "col": 4,
+      "frame_sha256": "725f9ca9446bbc7d2ab14f0aa3b47e3c3c6634d557591d49ab0ecd3d71e3a48b"
+    },
+    {
+      "k": 29,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_029",
+      "frame_index": 16,
+      "row": 4,
+      "col": 5,
+      "frame_sha256": "0bfa6975abc2c2ec8106d8055375b45e4fc2e6744f4264719047edd7ff2b7bdf"
+    },
+    {
+      "k": 30,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_030",
+      "frame_index": 16,
+      "row": 5,
+      "col": 0,
+      "frame_sha256": "1cc7cbf0059dc1065adf3ee3a1b93b916e93ba030e0a77f404879f5df4b0ad5f"
+    },
+    {
+      "k": 31,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_031",
+      "frame_index": 16,
+      "row": 5,
+      "col": 1,
+      "frame_sha256": "9d4e92797ca2a1353a4555fccbb0302b5021c7145c555cfefef39039e5e6fb62"
+    },
+    {
+      "k": 32,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_032",
+      "frame_index": 16,
+      "row": 5,
+      "col": 2,
+      "frame_sha256": "04bd37656923c68413b58cb502dc2440079deee694279eaef62c5598b9c2fe8b"
+    },
+    {
+      "k": 33,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_033",
+      "frame_index": 16,
+      "row": 5,
+      "col": 3,
+      "frame_sha256": "b094e44635ab047061492db9f95cdc40df5580091b3d3ae2fcc7f6eb587911a8"
+    },
+    {
+      "k": 34,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_034",
+      "frame_index": 16,
+      "row": 5,
+      "col": 4,
+      "frame_sha256": "5c277e222f9d6ceb7991831a8aa9da68e44ea0abc62fcb31924a0e549b2abeec"
+    },
+    {
+      "k": 35,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_035",
+      "frame_index": 16,
+      "row": 5,
+      "col": 5,
+      "frame_sha256": "1d1b0d98a4eba4be23dd6ecc2fc241f54ed16985a53f0285dc0a13168b17d51d"
+    },
+    {
+      "k": 36,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_036",
+      "frame_index": 16,
+      "row": 6,
+      "col": 0,
+      "frame_sha256": "89d3af7939f2afe00a10840c00c352cdf6cde4cc1e5e2a9434b8a52e331fedfe"
+    },
+    {
+      "k": 37,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_037",
+      "frame_index": 16,
+      "row": 6,
+      "col": 1,
+      "frame_sha256": "3d03d612ebed35e87caef5685d4c083f4c0883339279ae4388b8a98c5803d5e1"
+    },
+    {
+      "k": 38,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_038",
+      "frame_index": 16,
+      "row": 6,
+      "col": 2,
+      "frame_sha256": "a166eb16e550a19d1317074a22874b4eb428a9e0b62bcf624460f0478665c84b"
+    },
+    {
+      "k": 39,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_039",
+      "frame_index": 16,
+      "row": 6,
+      "col": 3,
+      "frame_sha256": "6e591b039d50629a11f0c727e47a39297badeb90ee15734d949588331dfb3302"
+    },
+    {
+      "k": 40,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_040",
+      "frame_index": 16,
+      "row": 6,
+      "col": 4,
+      "frame_sha256": "7122bd6318c73ca27d2240f9dcb1c4678e5be7bb2c1e3b72134535d7e40d13cd"
+    },
+    {
+      "k": 41,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_041",
+      "frame_index": 16,
+      "row": 6,
+      "col": 5,
+      "frame_sha256": "6dae8d7e60f444033bc42b29ae86f4abd01e531acd0655bb5c169cb72d97e21e"
+    },
+    {
+      "k": 42,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_042",
+      "frame_index": 16,
+      "row": 7,
+      "col": 0,
+      "frame_sha256": "039fadda984fbac69c75c467badada2eeb914bbe8df46d27340c77066d4151b8"
+    },
+    {
+      "k": 43,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_043",
+      "frame_index": 16,
+      "row": 7,
+      "col": 1,
+      "frame_sha256": "f68edfc81f31dae3880ecfe91be660f53238675a9a1aaca9874f2bf8cf8fa833"
+    },
+    {
+      "k": 44,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_044",
+      "frame_index": 16,
+      "row": 7,
+      "col": 2,
+      "frame_sha256": "f61456fe3bc4242caf9ff359aaa639a7c8a14be406361c805ba5de4ab207c919"
+    },
+    {
+      "k": 45,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_045",
+      "frame_index": 16,
+      "row": 7,
+      "col": 3,
+      "frame_sha256": "1ffc6837a3df331c1ae6327290ad9da7c11302d0172c09d143aab92a7db5c818"
+    },
+    {
+      "k": 46,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_046",
+      "frame_index": 16,
+      "row": 7,
+      "col": 4,
+      "frame_sha256": "084098c845d6feadee40c1f09fac0faf182d729afbb6af40eda7447eab3f9d70"
+    },
+    {
+      "k": 47,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_047",
+      "frame_index": 16,
+      "row": 7,
+      "col": 5,
+      "frame_sha256": "3cb36b44bd2046e9f03793cadbe90c9cac37d2420c11fb50217f469e4b5958af"
+    },
+    {
+      "k": 48,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_048",
+      "frame_index": 16,
+      "row": 8,
+      "col": 0,
+      "frame_sha256": "9d4efece1c0c1ea6392955c92fd571135f0bd79d2d17c3ad2d8906e3beaf3552"
+    },
+    {
+      "k": 49,
+      "kind": "prompt_switch",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_049",
+      "frame_index": 16,
+      "row": 8,
+      "col": 1,
+      "frame_sha256": "c2f606c0995cc8e77b224eeff8dbd651fcd24d4a00dd0426d3c5b0b46c426708"
+    },
+    {
+      "k": 50,
+      "kind": "cat_control",
+      "source": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/original_cat",
+      "frame_index": 16,
+      "row": 8,
+      "col": 2,
+      "frame_sha256": "7962538e3c6fdc612d71a66d0cf98e6aa63369e47c7681177d1c03abc6a82f7e"
+    }
+  ],
+  "image_sha256": "7f3b658d16c771875e2abfe52ce22fafba7eef72b5886a5f69eca0234364330a"
+}

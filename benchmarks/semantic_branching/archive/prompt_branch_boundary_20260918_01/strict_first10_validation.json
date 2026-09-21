@@ -1,0 +1,72 @@
+[
+  {
+    "step": 1,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.9959390759468079,
+    "different_latent_next_step": true
+  },
+  {
+    "step": 2,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.9917441010475159,
+    "different_latent_next_step": true
+  },
+  {
+    "step": 3,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.9874082207679749,
+    "different_latent_next_step": true
+  },
+  {
+    "step": 4,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.982924222946167,
+    "different_latent_next_step": true
+  },
+  {
+    "step": 5,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.978284478187561,
+    "different_latent_next_step": true
+  },
+  {
+    "step": 6,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.9734807014465332,
+    "different_latent_next_step": true
+  },
+  {
+    "step": 7,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.9685039520263672,
+    "different_latent_next_step": true
+  },
+  {
+    "step": 8,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.9633448123931885,
+    "different_latent_next_step": true
+  },
+  {
+    "step": 9,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.9579930305480957,
+    "different_latent_next_step": true
+  },
+  {
+    "step": 10,
+    "identical_prefix": true,
+    "matching_UniPC_history": true,
+    "sigma_at_switch": 0.9524376392364502,
+    "different_latent_next_step": true
+  }
+]

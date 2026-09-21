@@ -1,0 +1,64 @@
+{
+  "files": {
+    "comparison.mp4": {
+      "bytes": 1486930,
+      "sha256": "bdaf4c7816a8b055bda7581ca4945ecd36850c01459fb2621bb7533c39e71a90"
+    },
+    "contact_sheet.jpg": {
+      "bytes": 3579744,
+      "sha256": "c3f825ca4893c4af0f7c0af0e56cc29fc9cc381813f63ccd1c888028a5251751"
+    },
+    "validation.json": {
+      "bytes": 1049,
+      "sha256": "2ec2ed5e661e2eb33d4fdcb0f108e0517cfd1f63645aa47e2e30bcb5aa12f6ad"
+    },
+    "README.md": {
+      "bytes": 1029,
+      "sha256": "e2cd1e4f3936935ab10018376998a0f4669e20ef36157a2b57d755c7fb62511d"
+    },
+    "seed_20260922/video.mp4": {
+      "bytes": 772742,
+      "sha256": "596b36ac7a966d3a38cbeb0700c0956f4450cef81dcf90cb71eb83483e42d405"
+    },
+    "seed_20260922/all_frames.jpg": {
+      "bytes": 2548525,
+      "sha256": "72ff66f0818d88e24c27b513985fc12464bd94fe949efddc97677b3d3a76df91"
+    },
+    "seed_20260922/metadata.json": {
+      "bytes": 15837,
+      "sha256": "8fb45222ffbf7273861830ee87ade53f2b008df3920c8642f45b49945c3d7b43"
+    },
+    "seed_20260923/video.mp4": {
+      "bytes": 946846,
+      "sha256": "590baa432dda5cfe930336c5bcb87c727f19410ff9e471c80c93ba1c70b122de"
+    },
+    "seed_20260923/all_frames.jpg": {
+      "bytes": 2214655,
+      "sha256": "f4c81f3b5d7f5858381267515b22682cc6f3aca97f286feeee57257c81006ac7"
+    },
+    "seed_20260923/metadata.json": {
+      "bytes": 15845,
+      "sha256": "4a861db057670974744a5e5be391c52764ece2cb8994db86143ddcd0a96f3963"
+    },
+    "seed_20260924/video.mp4": {
+      "bytes": 838894,
+      "sha256": "faf2f94194e558e9d6c954d0433f163778b86328dd7434b11395ea41571b2d0c"
+    },
+    "seed_20260924/all_frames.jpg": {
+      "bytes": 2107488,
+      "sha256": "cbdd3efbe05e34fdb11de4dff4c8668ce4c754250c63871acd4811b37fa5a85b"
+    },
+    "seed_20260924/metadata.json": {
+      "bytes": 15837,
+      "sha256": "735e6dcc2712f42cd39b4d7f373c4d1a75ea7b62994d65ef9010e076334d77b6"
+    },
+    "assessment.json": {
+      "bytes": 1860,
+      "sha256": "cdcba55376060a988bc66abfce3840ca7e2311e92559544ccef89ec0f84e1e99"
+    },
+    "REPORT.md": {
+      "bytes": 1188,
+      "sha256": "053a1c5bfeae3b60417e30fcb37f438dc162ca78a7e292a0c524bde7093fb777"
+    }
+  }
+}

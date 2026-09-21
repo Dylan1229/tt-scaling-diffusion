@@ -1,0 +1,17 @@
+[
+  {
+    "mode": "original_cat",
+    "gpu": 0,
+    "pid": 510622
+  },
+  {
+    "mode": "switch_step05",
+    "gpu": 1,
+    "pid": 510623
+  },
+  {
+    "mode": "target_dog",
+    "gpu": 2,
+    "pid": 510624
+  }
+]

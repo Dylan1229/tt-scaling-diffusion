@@ -1,0 +1,817 @@
+{
+  "remote_host": "yukelab",
+  "files": [
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_step05_20260918_01/original_cat/frames_uint8.npy",
+      "source_run": "prompt_branch_step05_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_step05_20260918_01/original_cat/latent_after_step05.pt",
+      "source_run": "prompt_branch_step05_20260918_01",
+      "bytes": 6291645,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_step05_20260918_01/switch_step05/frames_uint8.npy",
+      "source_run": "prompt_branch_step05_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_step05_20260918_01/switch_step05/latent_after_step05.pt",
+      "source_run": "prompt_branch_step05_20260918_01",
+      "bytes": 6291645,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_step05_20260918_01/target_dog/frames_uint8.npy",
+      "source_run": "prompt_branch_step05_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_step05_20260918_01/target_dog/latent_after_step05.pt",
+      "source_run": "prompt_branch_step05_20260918_01",
+      "bytes": 6291645,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/original_cat/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_001/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_001/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_002/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_002/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_003/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_003/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_004/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_004/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_006/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_006/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_007/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_007/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_008/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_008/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_009/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_009/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_010/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_010/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_011/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_011/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_012/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_012/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_013/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_013/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_014/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_014/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_015/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_015/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_016/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_016/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_017/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_017/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_018/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_018/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_019/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_019/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_020/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_020/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_021/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_021/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_022/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_022/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_023/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_023/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_024/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_024/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_025/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_025/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_026/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_026/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_027/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_027/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_028/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_028/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_029/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_029/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_030/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_030/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_031/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_031/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_032/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_032/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_033/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_033/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_034/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_034/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_035/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_035/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_036/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_036/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_037/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_037/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_038/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_038/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_039/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_039/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_040/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_040/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_041/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_041/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_042/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_042/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_043/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_043/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_044/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_044/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_045/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_045/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_046/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_046/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_047/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_047/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_048/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_048/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_049/branch_latent.pt",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 6291539,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/prompt_branch_boundary_20260918_01/step_049/frames_uint8.npy",
+      "source_run": "prompt_branch_boundary_20260918_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/renoise_step40_to04_20260921_01/frames_uint8.npy",
+      "source_run": "renoise_step40_to04_20260921_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/renoise_step40_to04_20260921_01/fresh_random_noise.pt",
+      "source_run": "renoise_step40_to04_20260921_01",
+      "bytes": 6291638,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/renoise_step40_to04_20260921_01/full_dog_fresh_noise/frames_uint8.npy",
+      "source_run": "renoise_step40_to04_20260921_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/renoise_step40_to04_20260921_01/renoised_latent.pt",
+      "source_run": "renoise_step40_to04_20260921_01",
+      "bytes": 6291617,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/renoise_step40_to04_3noise_20260921_01/seed_20260922/frames_uint8.npy",
+      "source_run": "renoise_step40_to04_3noise_20260921_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/renoise_step40_to04_3noise_20260921_01/seed_20260922/fresh_random_noise.pt",
+      "source_run": "renoise_step40_to04_3noise_20260921_01",
+      "bytes": 6291638,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/renoise_step40_to04_3noise_20260921_01/seed_20260922/renoised_latent.pt",
+      "source_run": "renoise_step40_to04_3noise_20260921_01",
+      "bytes": 6291617,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/renoise_step40_to04_3noise_20260921_01/seed_20260923/frames_uint8.npy",
+      "source_run": "renoise_step40_to04_3noise_20260921_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/renoise_step40_to04_3noise_20260921_01/seed_20260923/fresh_random_noise.pt",
+      "source_run": "renoise_step40_to04_3noise_20260921_01",
+      "bytes": 6291638,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/renoise_step40_to04_3noise_20260921_01/seed_20260923/renoised_latent.pt",
+      "source_run": "renoise_step40_to04_3noise_20260921_01",
+      "bytes": 6291617,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/renoise_step40_to04_3noise_20260921_01/seed_20260924/frames_uint8.npy",
+      "source_run": "renoise_step40_to04_3noise_20260921_01",
+      "bytes": 97044608,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/renoise_step40_to04_3noise_20260921_01/seed_20260924/fresh_random_noise.pt",
+      "source_run": "renoise_step40_to04_3noise_20260921_01",
+      "bytes": 6291638,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    },
+    {
+      "path": "/data/datasets/peihao/tt-scaling-diffusion/runs/renoise_step40_to04_3noise_20260921_01/seed_20260924/renoised_latent.pt",
+      "source_run": "renoise_step40_to04_3noise_20260921_01",
+      "bytes": 6291617,
+      "storage": "original remote run directory",
+      "file_checksum": "not rehashed during archival; tensor-content hashes remain in metadata where available"
+    }
+  ]
+}
