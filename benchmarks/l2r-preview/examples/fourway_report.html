@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Unseen decoder comparison — four techniques</title>
+<style>
+:root{font:16px/1.5 system-ui,sans-serif;color:#18323e;background:#eef3f2}
+*{box-sizing:border-box}body{margin:0}main{max-width:1744px;margin:auto;padding:28px 32px}
+h1{font-size:32px;line-height:1.2;margin:10px 0}h2{font-size:21px;margin:0 0 12px}
+p{color:#536975;margin:10px 0}a{color:#136a8b;text-decoration-thickness:1px;text-underline-offset:3px}
+section{background:white;border:1px solid #dbe5e4;border-radius:14px;margin:20px 0;padding:24px}
+.badge{display:inline-block;border-radius:7px;background:#d4eee6;color:#185e4c;padding:4px 10px;font-size:13px;font-weight:600;letter-spacing:.03em}
+.small{font-size:13px}.table-wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:12px 10px;border-bottom:1px solid #e2e9e8;white-space:nowrap}
+th{font-size:13px;color:#526873;font-weight:600}td:first-child{font-weight:600}.highlight{background:#edf9f4}.highlight td:first-child{color:#176a50}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
+label{display:flex;flex-direction:column;font-size:12px;font-weight:600;gap:4px;color:#536975}
+select,button{font:15px system-ui;max-width:100%;padding:9px 12px;border:1px solid #c9d7d6;border-radius:7px;background:#fff;color:#18323e}
+button{cursor:pointer}button:hover{border-color:#2e8874;background:#f1faf6}
+#prompt{max-width:520px}#case{min-width:300px}#caption{font-size:16px;color:#233e4a}
+video{display:block;width:100%;background:#132d39;border-radius:8px;min-height:140px}
+#case-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+.metric{background:#f6f9f8;border-radius:8px;padding:10px 12px;font-size:13px}.metric b{display:block;color:#1c4e43}.metric span{color:#536975}
+details{margin-top:16px}summary{cursor:pointer;color:#335c61;font-weight:600}details p{max-width:1150px}
+.links{display:flex;flex-wrap:wrap;gap:10px 20px}.cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.cards button{text-align:left;padding:9px}.cards img{width:100%;display:block;border-radius:4px}.cards span{display:block;font-size:13px;margin-top:5px}
+.note{border-left:3px solid #b8d8cc;padding-left:12px}
+@media(max-width:850px){main{padding:16px}section{padding:16px}h1{font-size:27px}.cards{grid-template-columns:1fr}#case-metrics{grid-template-columns:1fr}#case{min-width:0}th,td{padding:9px}}
+</style>
+</head>
+<body><main>
+<span class="badge">UNSEEN · SAME FROZEN SET</span>
+<h1>Four techniques, one comparison</h1>
+<p>165 latents · 33 trajectories · 11 prompts · Native / TAEHV 21 endpoints / Eager BF16 / Compiled Quality + BF16 Export</p>
+
+<section>
+<h2>Quality and steady-state decode time</h2>
+<div class="table-wrap"><table><thead><tr><th>Technique</th><th>Decode time ↓</th><th>Parameters loaded</th><th>Frames computed → shown</th><th>PSNR ↑</th><th>SSIM ↑</th></tr></thead><tbody>__TABLE__</tbody></table></div>
+<p class="small">__TIMING_NOTE__</p>
+<p class="small note"><b>Native</b> decodes 81 frames, then selects endpoints 0, 4, …, 80. <b>TAEHV 21 endpoints</b> disables temporal upsampling and directly decodes 21 frames. Both Quality paths directly decode 21 frames. Scores measure fidelity to Native.</p>
+<details><summary>Implementation and measurement details</summary>
+<p class="small">__IMPLEMENTATION__</p>
+<p class="small">__PAIR_NOTE__</p>
+<p class="small">All three candidate outputs and all four-column MP4s were regenerated for this report. The Native visual reference is the same hash-verified FP16 RGB cache; Native timing uses actual VAE decoding. Metrics are computed before video compression: all 21 frames for PSNR, frames 0 / 10 / 20 for SSIM.</p>
+<div class="table-wrap"><table><thead><tr><th>Diffusion step / 50</th><th>TAEHV 21 endpoints · PSNR / SSIM</th><th>Eager BF16 · PSNR / SSIM</th><th>Compiled Quality + BF16 Export · PSNR / SSIM</th></tr></thead><tbody>__STEP_TABLE__</tbody></table></div>
+</details>
+</section>
+
+<section id="viewer">
+<h2>Inspect all 165 previews</h2>
+<div class="controls">
+<label>Prompt<select id="prompt"><option value="all">All prompts</option></select></label>
+<label>Diffusion step<select id="step"><option value="all">All steps</option><option value="5">5 / 50</option><option value="10">10 / 50</option><option value="20">20 / 50</option><option value="30">30 / 50</option><option value="50">50 / 50</option></select></label>
+<label>Seed<select id="seed"><option value="all">All seeds</option><option value="2">2</option><option value="5">5</option><option value="8">8</option></select></label>
+<label>Order<select id="order"><option value="case">Prompt / seed / step</option><option value="worst">Lowest compiled PSNR first</option><option value="difference">Largest eager / compiled difference</option></select></label>
+</div>
+<div class="controls"><select aria-label="Preview case" id="case"></select><button id="prev">← Previous</button><button id="next">Next →</button><span class="small" id="position"></span></div>
+<p id="caption"></p>
+<video id="video" controls autoplay muted loop playsinline preload="metadata"></video>
+<div id="case-metrics"></div>
+<p class="small">Left → right: Native · TAEHV 21 endpoints · Eager BF16 · Compiled Quality + BF16 Export. One synchronized local MP4, 21 frames at 4 fps. Fullscreen retains 832 × 480 pixels per technique; labels are included in the video.</p>
+</section>
+
+<section>
+<h2>Contact sheets and hard cases</h2>
+<div class="links"><a href="all_prompts_step10.jpg">Every prompt at step 10</a><a href="worst6_compiled.jpg">Lowest compiled PSNR</a><a href="largest6_execution_difference.jpg">Largest eager / compiled differences</a></div>
+<details><summary>Preview the six lowest-scoring compiled cases</summary><div id="worst" class="cards"></div></details>
+</section>
+
+<section>
+<h2>Records</h2>
+<p class="small">The two earlier reports remain unchanged. This repeats the same held-out set; it is not 165 independent videos. One generator, scheduler and resolution. No retraining or checkpoint selection.</p>
+<div class="links small"><a href="report.json">Metrics</a><a href="evaluation.json">Raw timings</a><a href="plan.json">Frozen plan</a><a href="README.txt">Notes</a><a href="../l2r_unseen_20261007/index.html" target="_blank">Original report</a><a href="../l2r_unseen_compiled_20261007/index.html" target="_blank">Compiled comparison report</a></div>
+</section>
+</main>
+<script>
+const rows=__ROWS__;
+const names={taehv21:'TAEHV 21 endpoints',eager:'Eager BF16',compiled:'Compiled Quality + BF16 Export'};
+const $=id=>document.getElementById(id);let shown=[];
+for(const p of [...new Set(rows.map(r=>r.prompt_id))]){
+ const option=document.createElement('option');option.value=p;
+ option.textContent=p+' — '+rows.find(r=>r.prompt_id===p).prompt;$('prompt').append(option);
+}
+function load(id){
+ const row=rows.find(r=>r.id===id);if(!row)return;
+ $('case').value=id;
+ $('caption').textContent=row.prompt+' · '+row.prompt_id+' · seed '+row.seed+' · step '+row.step+' / 50';
+ $('position').textContent=(shown.findIndex(r=>r.id===id)+1)+' / '+shown.length;
+ $('video').poster=row.poster;$('video').src=row.video;
+ $('video').play().catch(()=>{});
+ $('case-metrics').replaceChildren();
+ for(const [key,name] of Object.entries(names)){
+  const box=document.createElement('div'),title=document.createElement('b'),values=document.createElement('span');
+  box.className='metric';title.textContent=name;
+  values.textContent=row.metrics[key].full_psnr_db.toFixed(3)+' dB · SSIM '+row.metrics[key].ssim.toFixed(4);
+  box.append(title,values);$('case-metrics').append(box);
+ }
+}
+function filter(preferred){
+ shown=rows.filter(r=>($('prompt').value==='all'||r.prompt_id===$('prompt').value)&&
+  ($('step').value==='all'||r.step===Number($('step').value))&&
+  ($('seed').value==='all'||r.seed===Number($('seed').value)));
+ if($('order').value==='worst')shown.sort((a,b)=>a.metrics.compiled.full_psnr_db-b.metrics.compiled.full_psnr_db);
+ if($('order').value==='difference')shown.sort((a,b)=>b.difference-a.difference);
+ $('case').replaceChildren();
+ for(const r of shown){const option=document.createElement('option');option.value=r.id;option.textContent=r.id;$('case').append(option)}
+ if(shown.length)load(shown.some(r=>r.id===preferred)?preferred:shown[0].id);
+}
+for(const id of ['prompt','step','seed','order'])$(id).onchange=()=>filter();
+$('case').onchange=()=>load($('case').value);
+function advance(n){if(!shown.length)return;const i=shown.findIndex(r=>r.id===$('case').value);load(shown[(i+n+shown.length)%shown.length].id)}
+$('prev').onclick=()=>advance(-1);$('next').onclick=()=>advance(1);
+for(const row of [...rows].sort((a,b)=>a.metrics.compiled.full_psnr_db-b.metrics.compiled.full_psnr_db).slice(0,6)){
+ const button=document.createElement('button'),img=document.createElement('img'),label=document.createElement('span');
+ img.src=row.poster;img.loading='lazy';img.alt='Four decoder outputs for '+row.id;
+ label.textContent=row.id+' · Compiled PSNR '+row.metrics.compiled.full_psnr_db.toFixed(2)+' dB';
+ button.append(img,label);
+ button.onclick=()=>{for(const id of ['prompt','step','seed'])$(id).value='all';filter(row.id);$('viewer').scrollIntoView({behavior:'smooth'})};
+ $('worst').append(button);
+}
+filter();
+</script>
+</body></html>

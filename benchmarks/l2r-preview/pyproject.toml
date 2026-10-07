@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "l2r-preview"
+version = "0.1.0"
+description = "Standalone causal latent-to-RGB video preview decoder"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["torch>=2.4", "numpy", "imageio[ffmpeg]", "pillow"]
+
+[project.optional-dependencies]
+training = ["safetensors", "opencv-python-headless"]
+teacher = ["diffusers>=0.35", "accelerate"]
+dev = ["pytest", "ruff"]
+benchmark = ["diffusers>=0.38", "accelerate", "safetensors", "scikit-image", "tqdm"]
+
+[tool.setuptools.packages.find]
+include = ["l2r_preview*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110

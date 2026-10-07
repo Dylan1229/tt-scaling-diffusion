@@ -4,6 +4,10 @@
 
 Base model: **Wan 2.2 TI2V-5B** (T2V mode, 480p). Evaluation: **VBench**.
 
+## Fast preview decoder and reports
+
+[Quality preview decoder](benchmarks/l2r-preview/README.md): source, training code, and the Native / TAEHV 21 endpoints / Eager BF16 / Compiled Quality + BF16 Export comparison. Download the [complete report and weights](https://github.com/Dylan1229/tt-scaling-diffusion/releases/tag/l2r-preview-20261007) to play all 165 cases locally.
+
 ---
 
 ## Repository layout

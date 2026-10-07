@@ -1,0 +1,35 @@
+{
+  "checked_utc": "2026-10-07T17:34:39.019402+00:00",
+  "task_processes_exited": true,
+  "evaluation_pids": [
+    513588,
+    513589
+  ],
+  "fully_decoded_videos": 165,
+  "prior_reports_preserved": {
+    "unseen_diffusion_20261007": {
+      "verified_files": 539,
+      "checksums_sha256": "b993b0b04702eeec5233d12df976aadeecaf875595e563a8b2fdceccc267693f",
+      "index_sha256": "cb3f2abb5dc24515f1f54ab23e64dc60258d0f4d9a3920438e75e3fbd3cd4318",
+      "report_sha256": "83b2ecc359f5b2f112655ecde59e9c68e806098181595b608515cc306c46ad79"
+    },
+    "unseen_compiled_20261007": {
+      "verified_files": 517,
+      "checksums_sha256": "26809508fe173ae59ac2dd45b21c9ee4bd87c762598ba1a61b05b41c3153bb9b",
+      "index_sha256": "b9a6b50f311b7ffca070dd6ac9d42eaa35d98b8432747e7fa965fcbabb28042e",
+      "report_sha256": "944f3422db3db10276bb259c0997b5fef76b4b2c6e8bef58e1075f33268063bc"
+    }
+  },
+  "visual_review": {
+    "kind": "Manual midpoint-frame inspection before packaging",
+    "cases": [
+      "p05_seed0005_step50",
+      "p05_seed0008_step50"
+    ],
+    "observations": [
+      "Correct four-column ordering and readable method names.",
+      "Eager and compiled appearances closely match.",
+      "Fine foliage and bicycle detail are visibly softer in both Quality outputs than Native in the inspected examples."
+    ]
+  }
+}
